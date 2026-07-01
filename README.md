@@ -25,7 +25,7 @@ VITE_SUPABASE_URL=https://afrjifttnrjrsnxoqpdx.supabase.co
 3. เปิด Authentication → Providers → Google แล้วตั้งค่า Gmail OAuth
 4. เพิ่ม Redirect URL:
    - `http://localhost:5173/student/dashboard`
-   - `https://YOUR-NETLIFY-SITE.netlify.app/student/dashboard`
+   - `https://socup.grits.online/student/dashboard`
 5. Login เป็นบัญชีครู 1 ครั้ง แล้ว run SQL นี้เพื่อให้เข้า admin ได้:
 
 ```sql
@@ -50,7 +50,7 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 หลัง deploy ครั้งแรก ให้นำ URL ของ Netlify ไปเพิ่มใน Supabase Auth Redirect URLs:
 
 ```text
-https://YOUR-NETLIFY-SITE.netlify.app/student/dashboard
+https://socup.grits.online/student/dashboard
 ```
 
 RPC ที่ต้องมีในโปรเจกต์ฐานข้อมูลคือ `start_mock_attempt` และ `admin_adjust_quota` ตามพารามิเตอร์ที่ระบุในโค้ด
