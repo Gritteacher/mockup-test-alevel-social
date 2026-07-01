@@ -1,0 +1,375 @@
+-- Mock Up Test A-Level สังคม By ครูไต๋
+-- Run this file in Supabase SQL Editor.
+
+create extension if not exists "pgcrypto";
+
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text,
+  full_name text,
+  nickname text,
+  school text,
+  grade text,
+  room text,
+  target_score integer default 80,
+  role text not null default 'student' check (role in ('student', 'teacher', 'admin')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.quota_wallets (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique references public.profiles(id) on delete cascade,
+  mock_quota integer not null default 3 check (mock_quota >= 0),
+  practice_points integer not null default 0 check (practice_points >= 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.quota_transactions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  amount integer not null,
+  type text not null,
+  note text,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.exam_sets (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  duration_minutes integer not null default 90 check (duration_minutes > 0),
+  quota_cost integer not null default 1 check (quota_cost >= 0),
+  status text not null default 'draft' check (status in ('draft', 'published')),
+  mode text not null default 'mock' check (mode in ('mock', 'practice')),
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.questions (
+  id uuid primary key default gen_random_uuid(),
+  question_text text not null,
+  subject text not null default 'หน้าที่พลเมือง',
+  subject_id text,
+  topic_id text,
+  difficulty text not null default 'ปานกลาง',
+  explanation text,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.question_choices (
+  id uuid primary key default gen_random_uuid(),
+  question_id uuid not null references public.questions(id) on delete cascade,
+  choice_text text not null,
+  is_correct boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.exam_set_questions (
+  exam_set_id uuid not null references public.exam_sets(id) on delete cascade,
+  question_id uuid not null references public.questions(id) on delete cascade,
+  position integer not null,
+  primary key (exam_set_id, question_id)
+);
+
+create table if not exists public.attempts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  exam_set_id uuid not null references public.exam_sets(id) on delete restrict,
+  status text not null default 'in_progress' check (status in ('in_progress', 'submitted', 'expired')),
+  score integer not null default 0,
+  total_questions integer not null default 0,
+  started_at timestamptz not null default now(),
+  submitted_at timestamptz,
+  duration_seconds integer default 0,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.attempt_answers (
+  id uuid primary key default gen_random_uuid(),
+  attempt_id uuid not null references public.attempts(id) on delete cascade,
+  question_id uuid not null references public.questions(id) on delete restrict,
+  selected_choice_id uuid references public.question_choices(id) on delete set null,
+  is_correct boolean not null default false,
+  order_no integer,
+  created_at timestamptz not null default now(),
+  unique (attempt_id, question_id)
+);
+
+create index if not exists quota_transactions_user_created_idx on public.quota_transactions(user_id, created_at desc);
+create index if not exists attempts_user_created_idx on public.attempts(user_id, created_at desc);
+create index if not exists attempt_answers_attempt_idx on public.attempt_answers(attempt_id);
+create index if not exists exam_set_questions_exam_position_idx on public.exam_set_questions(exam_set_id, position);
+
+create or replace function public.touch_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_touch_updated_at on public.profiles;
+create trigger profiles_touch_updated_at
+before update on public.profiles
+for each row execute function public.touch_updated_at();
+
+drop trigger if exists quota_wallets_touch_updated_at on public.quota_wallets;
+create trigger quota_wallets_touch_updated_at
+before update on public.quota_wallets
+for each row execute function public.touch_updated_at();
+
+drop trigger if exists exam_sets_touch_updated_at on public.exam_sets;
+create trigger exam_sets_touch_updated_at
+before update on public.exam_sets
+for each row execute function public.touch_updated_at();
+
+drop trigger if exists questions_touch_updated_at on public.questions;
+create trigger questions_touch_updated_at
+before update on public.questions
+for each row execute function public.touch_updated_at();
+
+create or replace function public.is_admin_or_teacher()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1
+    from public.profiles
+    where id = auth.uid()
+      and role in ('teacher', 'admin')
+  );
+$$;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, email, full_name, nickname)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1))
+  )
+  on conflict (id) do nothing;
+
+  insert into public.quota_wallets (user_id, mock_quota, practice_points)
+  values (new.id, 3, 0)
+  on conflict (user_id) do nothing;
+
+  insert into public.quota_transactions (user_id, amount, type, note)
+  values (new.id, 3, 'initial_quota', 'โควตาเริ่มต้นสำหรับนักเรียนใหม่')
+  on conflict do nothing;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute function public.handle_new_user();
+
+create or replace function public.start_mock_attempt(p_exam_set_id uuid)
+returns public.attempts
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_exam public.exam_sets%rowtype;
+  v_wallet public.quota_wallets%rowtype;
+  v_attempt public.attempts%rowtype;
+  v_total integer;
+begin
+  if v_user_id is null then
+    raise exception 'not authenticated';
+  end if;
+
+  select * into v_exam
+  from public.exam_sets
+  where id = p_exam_set_id and status = 'published' and mode = 'mock';
+
+  if not found then
+    raise exception 'exam set not found';
+  end if;
+
+  select * into v_wallet
+  from public.quota_wallets
+  where user_id = v_user_id
+  for update;
+
+  if not found then
+    insert into public.quota_wallets (user_id, mock_quota, practice_points)
+    values (v_user_id, 3, 0)
+    returning * into v_wallet;
+  end if;
+
+  if v_wallet.mock_quota < v_exam.quota_cost then
+    raise exception 'quota not enough';
+  end if;
+
+  update public.quota_wallets
+  set mock_quota = mock_quota - v_exam.quota_cost
+  where user_id = v_user_id;
+
+  insert into public.quota_transactions (user_id, amount, type, note)
+  values (v_user_id, -v_exam.quota_cost, 'use_mock_quota', 'เริ่มทำ ' || v_exam.title);
+
+  select count(*) into v_total
+  from public.exam_set_questions
+  where exam_set_id = p_exam_set_id;
+
+  insert into public.attempts (user_id, exam_set_id, total_questions)
+  values (v_user_id, p_exam_set_id, v_total)
+  returning * into v_attempt;
+
+  return v_attempt;
+end;
+$$;
+
+create or replace function public.admin_adjust_quota(p_user_id uuid, p_amount integer, p_note text default null)
+returns public.quota_wallets
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_wallet public.quota_wallets%rowtype;
+begin
+  if not public.is_admin_or_teacher() then
+    raise exception 'permission denied';
+  end if;
+
+  insert into public.quota_wallets (user_id, mock_quota, practice_points)
+  values (p_user_id, greatest(0, p_amount), 0)
+  on conflict (user_id) do update
+  set mock_quota = greatest(0, public.quota_wallets.mock_quota + p_amount)
+  returning * into v_wallet;
+
+  insert into public.quota_transactions (user_id, amount, type, note, created_by)
+  values (
+    p_user_id,
+    p_amount,
+    case when p_amount >= 0 then 'admin_add_quota' else 'admin_remove_quota' end,
+    p_note,
+    auth.uid()
+  );
+
+  return v_wallet;
+end;
+$$;
+
+alter table public.profiles enable row level security;
+alter table public.quota_wallets enable row level security;
+alter table public.quota_transactions enable row level security;
+alter table public.exam_sets enable row level security;
+alter table public.questions enable row level security;
+alter table public.question_choices enable row level security;
+alter table public.exam_set_questions enable row level security;
+alter table public.attempts enable row level security;
+alter table public.attempt_answers enable row level security;
+
+drop policy if exists "profiles read own or admin" on public.profiles;
+create policy "profiles read own or admin" on public.profiles
+for select using (id = auth.uid() or public.is_admin_or_teacher());
+
+drop policy if exists "profiles update own safe fields" on public.profiles;
+create policy "profiles update own safe fields" on public.profiles
+for update using (id = auth.uid()) with check (id = auth.uid());
+
+drop policy if exists "wallet read own or admin" on public.quota_wallets;
+create policy "wallet read own or admin" on public.quota_wallets
+for select using (user_id = auth.uid() or public.is_admin_or_teacher());
+
+drop policy if exists "transactions read own or admin" on public.quota_transactions;
+create policy "transactions read own or admin" on public.quota_transactions
+for select using (user_id = auth.uid() or public.is_admin_or_teacher());
+
+drop policy if exists "published exams readable" on public.exam_sets;
+create policy "published exams readable" on public.exam_sets
+for select using (status = 'published' or public.is_admin_or_teacher());
+
+drop policy if exists "admin manage exams" on public.exam_sets;
+create policy "admin manage exams" on public.exam_sets
+for all using (public.is_admin_or_teacher()) with check (public.is_admin_or_teacher());
+
+drop policy if exists "questions readable" on public.questions;
+create policy "questions readable" on public.questions
+for select using (true);
+
+drop policy if exists "admin manage questions" on public.questions;
+create policy "admin manage questions" on public.questions
+for all using (public.is_admin_or_teacher()) with check (public.is_admin_or_teacher());
+
+drop policy if exists "choices readable" on public.question_choices;
+create policy "choices readable" on public.question_choices
+for select using (true);
+
+drop policy if exists "admin manage choices" on public.question_choices;
+create policy "admin manage choices" on public.question_choices
+for all using (public.is_admin_or_teacher()) with check (public.is_admin_or_teacher());
+
+drop policy if exists "exam questions readable" on public.exam_set_questions;
+create policy "exam questions readable" on public.exam_set_questions
+for select using (true);
+
+drop policy if exists "admin manage exam questions" on public.exam_set_questions;
+create policy "admin manage exam questions" on public.exam_set_questions
+for all using (public.is_admin_or_teacher()) with check (public.is_admin_or_teacher());
+
+drop policy if exists "attempts read own or admin" on public.attempts;
+create policy "attempts read own or admin" on public.attempts
+for select using (user_id = auth.uid() or public.is_admin_or_teacher());
+
+drop policy if exists "attempts update own" on public.attempts;
+create policy "attempts update own" on public.attempts
+for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+drop policy if exists "attempt answers read own or admin" on public.attempt_answers;
+create policy "attempt answers read own or admin" on public.attempt_answers
+for select using (
+  exists (
+    select 1 from public.attempts a
+    where a.id = attempt_id
+      and (a.user_id = auth.uid() or public.is_admin_or_teacher())
+  )
+);
+
+drop policy if exists "attempt answers insert own" on public.attempt_answers;
+create policy "attempt answers insert own" on public.attempt_answers
+for insert with check (
+  exists (
+    select 1 from public.attempts a
+    where a.id = attempt_id
+      and a.user_id = auth.uid()
+      and a.status = 'in_progress'
+  )
+);
+
+insert into public.exam_sets (id, title, description, duration_minutes, quota_cost, status, mode)
+values (
+  '11111111-1111-4111-8111-111111111111',
+  'A-Level สังคม ชุดทดลองที่ 1',
+  'ชุดตัวอย่างสำหรับทดสอบระบบก่อนเพิ่มข้อสอบจริง',
+  90,
+  1,
+  'published',
+  'mock'
+)
+on conflict (id) do nothing;
