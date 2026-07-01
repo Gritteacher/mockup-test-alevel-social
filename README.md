@@ -25,7 +25,7 @@ VITE_SUPABASE_URL=https://afrjifttnrjrsnxoqpdx.supabase.co
 3. เปิด Authentication → Providers → Google แล้วตั้งค่า Gmail OAuth
 4. เพิ่ม Redirect URL:
    - `http://localhost:5173/student/dashboard`
-   - `https://gritteacher.github.io/mockup-test-alevel-social/student/dashboard`
+   - `https://YOUR-NETLIFY-SITE.netlify.app/student/dashboard`
 5. Login เป็นบัญชีครู 1 ครั้ง แล้ว run SQL นี้เพื่อให้เข้า admin ได้:
 
 ```sql
@@ -34,14 +34,23 @@ set role = 'teacher'
 where email = 'YOUR_GMAIL_HERE';
 ```
 
-## Deploy GitHub Pages
+## Deploy Netlify
 
-repo นี้มี workflow `.github/workflows/deploy.yml` แล้ว เมื่อ push เข้า `main` จะ build และ deploy ไป GitHub Pages
+โปรเจกต์นี้เตรียม `netlify.toml` ไว้แล้ว ให้ Connect repo นี้ใน Netlify แล้วใช้ค่า default ได้เลย:
 
-ต้องเพิ่ม GitHub repository secret:
+- Build command: `npm run build`
+- Publish directory: `dist`
+
+ต้องเพิ่ม Environment variable ใน Netlify:
 
 ```text
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+หลัง deploy ครั้งแรก ให้นำ URL ของ Netlify ไปเพิ่มใน Supabase Auth Redirect URLs:
+
+```text
+https://YOUR-NETLIFY-SITE.netlify.app/student/dashboard
 ```
 
 RPC ที่ต้องมีในโปรเจกต์ฐานข้อมูลคือ `start_mock_attempt` และ `admin_adjust_quota` ตามพารามิเตอร์ที่ระบุในโค้ด
