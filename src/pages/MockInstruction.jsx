@@ -1,2 +1,39 @@
-import { useEffect,useState } from 'react'; import { useNavigate,useParams } from 'react-router-dom'; import { Clock3,ListChecks,Ticket,ShieldCheck,AlertCircle,ArrowRight } from 'lucide-react'; import { supabase,isSupabaseConfigured } from '../lib/supabaseClient'; import { demoExams,demoWallet } from '../lib/demoData'
-export default function MockInstruction(){const {examId}=useParams(),nav=useNavigate();const [exam,setExam]=useState(demoExams.find(x=>x.id===examId)||demoExams[0]),[wallet,setWallet]=useState(demoWallet),[loading,setLoading]=useState(false);useEffect(()=>{if(!isSupabaseConfigured)return;(async()=>{const {data:{session}}=await supabase.auth.getSession();const [e,w]=await Promise.all([supabase.from('exam_sets').select('*').eq('id',examId).single(),supabase.from('quota_wallets').select('*').eq('user_id',session.user.id).single()]);if(e.data)setExam(e.data);if(w.data)setWallet(w.data)})()},[examId]);async function start(){if(wallet.mock_quota<exam.quota_cost)return alert('โควตาไม่เพียงพอ กรุณาฝึกทำโจทย์เพื่อสะสมโควตาเพิ่ม');setLoading(true);if(!isSupabaseConfigured){sessionStorage.setItem('demoAttempt',JSON.stringify({id:'demo-attempt',exam_set_id:exam.id,started_at:new Date().toISOString()}));nav('/mock/attempt/demo-attempt');return}const {data,error}=await supabase.rpc('start_mock_attempt',{p_exam_set_id:examId});if(error){alert(error.message?.includes('quota')?'โควตาไม่เพียงพอ กรุณาสะสมโควตาเพิ่ม':'ไม่สามารถเริ่มสอบได้ กรุณาลองใหม่');setLoading(false);return}nav(`/mock/attempt/${data.id||data}`)}return <div className="page narrow"><div className="instruction-hero"><span>Mock Up Test</span><h1>{exam.title}</h1><p>{exam.description}</p><div><b><Clock3/>{exam.duration_minutes} นาที</b><b><ListChecks/>{exam.question_count} ข้อ</b><b><Ticket/>ใช้ {exam.quota_cost} โควตา</b></div></div><section className="panel instruction-panel"><h2>คำชี้แจงก่อนเริ่มสอบ</h2><ol><li>ข้อสอบมีทั้งหมด {exam.question_count} ข้อ ใช้เวลาทำ {exam.duration_minutes} นาที</li><li>เลือกคำตอบที่ถูกต้องที่สุดเพียงคำตอบเดียวในแต่ละข้อ</li><li>สามารถย้อนกลับมาแก้ไขคำตอบได้ก่อนกดส่งข้อสอบ</li><li>เมื่อหมดเวลา ระบบจะส่งคำตอบให้อัตโนมัติ</li><li>เมื่อเริ่มสอบแล้วจะไม่สามารถคืนโควตาได้</li></ol><div className="warning"><AlertCircle/><div><b>กรุณาเตรียมตัวให้พร้อม</b><span>ตรวจสอบสัญญาณอินเทอร์เน็ต และไม่ควรปิดหน้าต่างระหว่างทำข้อสอบ</span></div></div><div className="quota-confirm"><ShieldCheck/><div><span>โควตาคงเหลือ</span><b>{wallet.mock_quota} ครั้ง</b></div><ArrowRight/><div><span>หลังเริ่มสอบ</span><b>{wallet.mock_quota-exam.quota_cost} ครั้ง</b></div></div><button className="button primary full large" onClick={start} disabled={loading}>{loading?'กำลังเตรียมข้อสอบ…':'พร้อมแล้ว เริ่มทำข้อสอบ'} <ArrowRight/></button></section></div>}
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Clock3, ListChecks, Ticket, AlertTriangle, ArrowRight, ArrowLeft } from 'lucide-react'
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
+import { demoExams, demoWallet } from '../lib/demoData'
+
+export default function MockInstruction() {
+  const { examId } = useParams()
+  const nav = useNavigate()
+  const [exam, setExam] = useState(demoExams.find(x => x.id === examId) || demoExams[0])
+  const [wallet, setWallet] = useState(demoWallet)
+  const [loading, setLoading] = useState(false)
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const [e, w] = await Promise.all([supabase.from('exam_sets').select('*').eq('id', examId).single(), supabase.from('quota_wallets').select('*').eq('user_id', session.user.id).single()])
+      if (e.data) setExam(e.data)
+      if (w.data) setWallet(w.data)
+    })()
+  }, [examId])
+  async function start() {
+    if (wallet.mock_quota < exam.quota_cost) return alert('โควตาไม่เพียงพอ กรุณาฝึกทำโจทย์เพื่อสะสมโควตาเพิ่ม')
+    setLoading(true)
+    if (!isSupabaseConfigured) {
+      sessionStorage.setItem('demoAttempt', JSON.stringify({ id: 'demo-attempt', exam_set_id: exam.id, started_at: new Date().toISOString() }))
+      nav('/mock/attempt/demo-attempt')
+      return
+    }
+    const { data, error } = await supabase.rpc('start_mock_attempt', { p_exam_set_id: examId })
+    if (error) { alert(error.message?.includes('quota') ? 'โควตาไม่เพียงพอ กรุณาสะสมโควตาเพิ่ม' : 'ไม่สามารถเริ่มสอบได้ กรุณาลองใหม่'); setLoading(false); return }
+    nav(`/mock/attempt/${data.id || data}`)
+  }
+  return <div className="page narrow instruction-page">
+    <div className="simple-page-title"><Link to="/mock"><ArrowLeft /></Link><h1>คำชี้แจงก่อนสอบ</h1></div>
+    <section className="panel exam-summary"><h2>{exam.title}</h2><div><b><Clock3 />{exam.duration_minutes} นาที</b><b><ListChecks />{exam.question_count || 50} ข้อ</b><b className="quota-text"><Ticket />{exam.quota_cost} โควตา</b></div></section>
+    <section className="instruction-body"><h2>ข้อปฏิบัติก่อนเข้าสอบ</h2><ol><li>เตรียมอุปกรณ์และสถานที่สอบให้พร้อม</li><li>ห้ามปิดหรือรีเฟรชหน้าจอขณะกำลังสอบ</li><li>ตรวจสอบว่าตอบครบทุกข้อก่อนกดส่ง</li><li>แนะนำให้ใช้สัญญาณอินเทอร์เน็ตที่เสถียร</li><li>ไม่สามารถหยุดพักหรือบันทึกไว้ทำต่อได้</li></ol><div className="warning"><AlertTriangle /><div><b>หากอินเทอร์เน็ตขัดข้อง</b><span>ระบบจะคืนโควตาให้อัตโนมัติ</span></div></div><div className="quota-confirm"><b>โควตาปัจจุบัน</b><strong>{wallet.mock_quota}</strong><ArrowRight /><strong>{wallet.mock_quota - exam.quota_cost}</strong></div><button className="button primary full large" onClick={start} disabled={loading}>{loading ? 'กำลังเตรียมข้อสอบ…' : 'พร้อมแล้ว เริ่มทำข้อสอบ'} <ArrowRight /></button></section>
+  </div>
+}

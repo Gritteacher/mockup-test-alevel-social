@@ -1,2 +1,45 @@
-import { useEffect,useMemo,useState } from 'react'; import { useNavigate,useParams } from 'react-router-dom'; import { Clock3,Flag,ChevronLeft,ChevronRight,Send } from 'lucide-react'; import { supabase,isSupabaseConfigured } from '../lib/supabaseClient'; import { demoQuestions } from '../lib/demoData'
-export default function TakeMock(){const {attemptId}=useParams(),nav=useNavigate();const [questions,setQuestions]=useState(demoQuestions),[attempt,setAttempt]=useState({id:attemptId,exam_set_id:'social-01'}),[answers,setAnswers]=useState({}),[index,setIndex]=useState(0),[seconds,setSeconds]=useState(90*60),[submitting,setSubmitting]=useState(false);useEffect(()=>{if(!isSupabaseConfigured)return;(async()=>{const {data:a}=await supabase.from('attempts').select('*, exam_sets(duration_minutes,title)').eq('id',attemptId).single();if(a){setAttempt(a);setSeconds(a.exam_sets.duration_minutes*60)}const {data}=await supabase.from('exam_set_questions').select('position, questions(*, question_choices(*))').eq('exam_set_id',a?.exam_set_id).order('position');if(data)setQuestions(data.map(x=>({...x.questions,choices:x.questions.question_choices?.map(c=>c.choice_text),choice_rows:x.questions.question_choices,correct_index:x.questions.question_choices?.findIndex(c=>c.is_correct)})))})()},[attemptId]);useEffect(()=>{const timer=setInterval(()=>setSeconds(s=>{if(s<=1){clearInterval(timer);submit(true);return 0}return s-1}),1000);return()=>clearInterval(timer)},[questions,answers]);const answered=Object.keys(answers).length;const q=questions[index];const time=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;const progress=useMemo(()=>Math.round(answered/questions.length*100),[answered,questions]);async function submit(auto=false){if(submitting)return;if(!auto&&answered<questions.length&&!confirm(`ยังไม่ได้ตอบ ${questions.length-answered} ข้อ ต้องการส่งคำตอบหรือไม่?`))return;setSubmitting(true);let correct=0;const rows=questions.map((x,i)=>{const selected=answers[x.id];const ok=selected===x.correct_index;if(ok)correct++;return {attempt_id:attemptId,question_id:x.id,selected_choice_id:x.choice_rows?.[selected]?.id||null,is_correct:ok,order_no:i+1}});const result={id:attemptId,score:correct,total:questions.length,percentage:Math.round(correct/questions.length*100),duration_seconds:90*60-seconds,answers,questions};if(isSupabaseConfigured){await supabase.from('attempt_answers').insert(rows);/* TODO: Production ควรย้าย logic ตรวจคำตอบทั้งหมดไป RPC submit_attempt เพื่อป้องกันการแก้คะแนนจาก client */await supabase.from('attempts').update({score:correct,total_questions:questions.length,status:'submitted',submitted_at:new Date().toISOString(),duration_seconds:result.duration_seconds}).eq('id',attemptId)}else sessionStorage.setItem(`result:${attemptId}`,JSON.stringify(result));nav(`/mock/result/${attemptId}`)}if(!q)return <div className="page-loader">กำลังโหลดข้อสอบ…</div>;return <div className="exam-page"><header className="exam-header"><div><span>A-Level สังคม</span><b>Mock Up Test ชุดที่ 1</b></div><div className={'timer '+(seconds<300?'danger':'')}><Clock3/><span>เวลาคงเหลือ</span><b>{time}</b></div><button className="button primary" onClick={()=>submit(false)}><Send/>ส่งข้อสอบ</button></header><div className="exam-progress"><i style={{width:`${progress}%`}}/><span>ตอบแล้ว {answered}/{questions.length}</span></div><main className="exam-workspace"><aside className="question-map"><h3>ข้อสอบทั้งหมด</h3><div>{questions.map((x,i)=><button key={x.id} className={(i===index?'current ':'')+(answers[x.id]!==undefined?'answered':'')} onClick={()=>setIndex(i)}>{i+1}</button>)}</div><p><i className="dot current"/>ข้อปัจจุบัน <i className="dot answered"/>ตอบแล้ว</p></aside><section className="question-card"><div className="question-top"><span>ข้อที่ {index+1} จาก {questions.length}</span><button><Flag/>ทำเครื่องหมาย</button></div><h2>{q.question_text}</h2><div className="choices">{q.choices.map((c,i)=><button key={i} className={answers[q.id]===i?'selected':''} onClick={()=>setAnswers({...answers,[q.id]:i})}><span>{String.fromCharCode(65+i)}</span>{c}</button>)}</div><div className="question-actions"><button className="button ghost" disabled={index===0} onClick={()=>setIndex(index-1)}><ChevronLeft/>ข้อก่อนหน้า</button><button className="button primary" disabled={index===questions.length-1} onClick={()=>setIndex(index+1)}>ข้อถัดไป<ChevronRight/></button></div></section></main></div>}
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { Clock3, Flag, ChevronLeft, ChevronRight, Send, Menu } from 'lucide-react'
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
+import { demoQuestions } from '../lib/demoData'
+
+export default function TakeMock() {
+  const { attemptId } = useParams()
+  const nav = useNavigate()
+  const [questions, setQuestions] = useState(demoQuestions)
+  const [answers, setAnswers] = useState({})
+  const [index, setIndex] = useState(0)
+  const [seconds, setSeconds] = useState(90 * 60)
+  const [submitting, setSubmitting] = useState(false)
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    ;(async () => {
+      const { data: a } = await supabase.from('attempts').select('*, exam_sets(duration_minutes,title)').eq('id', attemptId).single()
+      if (a) setSeconds(a.exam_sets.duration_minutes * 60)
+      const { data } = await supabase.from('exam_set_questions').select('position, questions(*, question_choices(*))').eq('exam_set_id', a?.exam_set_id).order('position')
+      if (data) setQuestions(data.map(x => ({ ...x.questions, choices: x.questions.question_choices?.map(c => c.choice_text), choice_rows: x.questions.question_choices, correct_index: x.questions.question_choices?.findIndex(c => c.is_correct) })))
+    })()
+  }, [attemptId])
+  useEffect(() => { const timer = setInterval(() => setSeconds(s => { if (s <= 1) { clearInterval(timer); submit(true); return 0 } return s - 1 }), 1000); return () => clearInterval(timer) }, [questions, answers])
+  const answered = Object.keys(answers).length
+  const q = questions[index]
+  const time = `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds % 3600 / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
+  const progress = useMemo(() => Math.round(answered / questions.length * 100), [answered, questions])
+  async function submit(auto = false) {
+    if (submitting) return
+    if (!auto && answered < questions.length && !confirm(`ยังไม่ได้ตอบ ${questions.length - answered} ข้อ ต้องการส่งคำตอบหรือไม่?`)) return
+    setSubmitting(true)
+    let correct = 0
+    const rows = questions.map((x, i) => { const selected = answers[x.id]; const ok = selected === x.correct_index; if (ok) correct++; return { attempt_id: attemptId, question_id: x.id, selected_choice_id: x.choice_rows?.[selected]?.id || null, is_correct: ok, order_no: i + 1 } })
+    const result = { id: attemptId, score: correct, total: questions.length, percentage: Math.round(correct / questions.length * 100), duration_seconds: 90 * 60 - seconds, answers, questions }
+    if (isSupabaseConfigured) { await supabase.from('attempt_answers').insert(rows); /* TODO: move scoring to RPC submit_attempt */ await supabase.from('attempts').update({ score: correct, total_questions: questions.length, status: 'submitted', submitted_at: new Date().toISOString(), duration_seconds: result.duration_seconds }).eq('id', attemptId) } else sessionStorage.setItem(`result:${attemptId}`, JSON.stringify(result))
+    nav(`/mock/result/${attemptId}`)
+  }
+  if (!q) return <div className="page-loader">กำลังโหลดข้อสอบ…</div>
+  return <div className="exam-page">
+    <header className="exam-header"><button className="exam-menu" aria-label="เมนูข้อสอบ"><Menu /></button><div><span>A-Level สังคม</span><b>Mock Test ชุดที่ 1</b></div><div className={'timer ' + (seconds < 300 ? 'danger' : '')}><Clock3 /><b>{time}</b></div><button className="button primary desktop-submit" onClick={() => submit(false)}><Send />ส่งข้อสอบ</button></header>
+    <div className="exam-progress"><i style={{ width: `${progress}%` }} /></div>
+    <main className="exam-workspace"><aside className="question-map"><h3>ข้อสอบทั้งหมด</h3><div>{questions.map((x, i) => <button key={x.id} className={(i === index ? 'current ' : '') + (answers[x.id] !== undefined ? 'answered' : '')} onClick={() => setIndex(i)}>{i + 1}</button>)}</div></aside><section className="question-card"><div className="question-prompt"><div className="question-top"><span>ข้อที่ {index + 1}</span><button><Flag />ทำเครื่องหมาย</button></div><h2>{q.question_text}</h2></div><div className="choices">{q.choices.map((c, i) => <button key={i} className={answers[q.id] === i ? 'selected' : ''} onClick={() => setAnswers({ ...answers, [q.id]: i })}><span></span>{c}</button>)}</div><button className="mobile-submit" onClick={() => submit(false)}>ส่งข้อสอบ</button><div className="question-actions"><button className="button ghost" disabled={index === 0} onClick={() => setIndex(index - 1)}><ChevronLeft />ก่อนหน้า</button><span>{index + 1} / {questions.length}</span><button className="button primary" disabled={index === questions.length - 1} onClick={() => setIndex(index + 1)}>ถัดไป<ChevronRight /></button></div></section></main>
+  </div>
+}

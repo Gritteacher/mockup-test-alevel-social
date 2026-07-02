@@ -1,2 +1,19 @@
-import { useEffect,useState } from 'react'; import { Ticket,Sparkles,ArrowDown,ArrowUp,Dumbbell,Gift } from 'lucide-react'; import { supabase,isSupabaseConfigured } from '../lib/supabaseClient'; import { demoWallet,demoTransactions } from '../lib/demoData'
-export default function Quota(){const [wallet,setWallet]=useState(demoWallet),[tx,setTx]=useState(demoTransactions);useEffect(()=>{if(!isSupabaseConfigured)return;(async()=>{const {data:{session}}=await supabase.auth.getSession();const [w,t]=await Promise.all([supabase.from('quota_wallets').select('*').eq('user_id',session.user.id).single(),supabase.from('quota_transactions').select('*').eq('user_id',session.user.id).order('created_at',{ascending:false})]);if(w.data)setWallet(w.data);if(t.data)setTx(t.data)})()},[]);return <div className="page"><div className="page-heading"><div><span className="eyebrow">สิทธิ์การใช้งาน</span><h1>โควตาของฉัน</h1><p>ติดตามโควตา Mock Test และคะแนนจากการฝึกฝน</p></div></div><div className="wallet-grid"><div className="wallet-card indigo"><Ticket/><div><span>Mock Quota</span><b>{wallet.mock_quota} <small>ครั้ง</small></b><p>ใช้สำหรับทำข้อสอบจำลอง</p></div></div><div className="wallet-card gold"><Sparkles/><div><span>Practice Points</span><b>{wallet.practice_points} <small>คะแนน</small></b><p>อีก {100-wallet.practice_points%100} คะแนน ได้ 1 โควตา</p></div></div></div><div className="content-grid quota-content"><section className="panel"><div className="section-title"><div><h2>ประวัติโควตา</h2><p>รายการรับและใช้โควตาล่าสุด</p></div></div>{tx.map(x=><div className="transaction" key={x.id}><span className={x.amount>0?'in':'out'}>{x.amount>0?<ArrowDown/>:<ArrowUp/>}</span><div><b>{x.type}</b><small>{x.note} · {new Date(x.created_at).toLocaleDateString('th-TH')}</small></div><strong className={x.amount>0?'good':'bad'}>{x.amount>0?'+':''}{x.amount}</strong></div>)}</section><section className="panel earn-card"><h2>รับโควตาเพิ่มได้อย่างไร?</h2><div><Dumbbell/><span><b>ฝึกทำโจทย์</b><small>ครบ 100 Practice Points รับ 1 โควตา</small></span></div><div><Gift/><span><b>กิจกรรมพิเศษ</b><small>ร่วมกิจกรรมกับครูไต๋เพื่อรับโควตาโบนัส</small></span></div></section></div></div>}
+import { useEffect, useState } from 'react'
+import { Ticket, Star, CheckCircle2, Gift, PlusCircle, MinusCircle } from 'lucide-react'
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
+import { demoWallet, demoTransactions } from '../lib/demoData'
+
+export default function Quota() {
+  const [wallet, setWallet] = useState(demoWallet)
+  const [tx, setTx] = useState(demoTransactions)
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const [w, t] = await Promise.all([supabase.from('quota_wallets').select('*').eq('user_id', session.user.id).single(), supabase.from('quota_transactions').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false })])
+      if (w.data) setWallet(w.data)
+      if (t.data) setTx(t.data)
+    })()
+  }, [])
+  return <div className="page quota-page"><div className="page-heading"><div><h1>โควตาของฉัน</h1><p>สิทธิ์การทำข้อสอบของคุณ</p></div></div><div className="wallet-grid"><div className="wallet-card indigo"><div><span>Mock Quota</span><b>{wallet.mock_quota}</b></div><Ticket /></div><div className="wallet-card points"><div><span>Practice Points</span><b>{wallet.practice_points}</b></div><Star /></div></div><section className="quota-earn"><h2>วิธีรับโควตาเพิ่ม</h2><div><CheckCircle2 /><span>สอบผ่านเกณฑ์ +1 โควตา</span></div><div><Star /><span>สะสม 100 Practice Points = +1 โควตา</span></div><div><Gift /><span>ครูไต๋แจกพิเศษ</span></div></section><section className="quota-history"><h2>ประวัติโควตา</h2>{tx.map(x => <div className="transaction" key={x.id}><time>{new Date(x.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</time><div><b>{x.note || x.type}</b></div><strong className={x.amount > 0 ? 'good' : 'bad'}>{x.amount > 0 ? <PlusCircle /> : <MinusCircle />}{x.amount > 0 ? '+' : ''}{x.amount}</strong></div>)}</section></div>
+}

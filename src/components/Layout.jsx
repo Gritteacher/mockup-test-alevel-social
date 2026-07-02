@@ -1,11 +1,45 @@
-import { useState } from 'react'; import { NavLink,useNavigate } from 'react-router-dom'; import { LayoutDashboard,ClipboardCheck,Dumbbell,Ticket,UserRound,ShieldCheck,Users,BookOpen,Files,ChartNoAxesCombined,LogOut,Menu,X,GraduationCap } from 'lucide-react'; import { supabase,isSupabaseConfigured } from '../lib/supabaseClient'
-const studentLinks=[['/student/dashboard','ภาพรวม',LayoutDashboard],['/mock','Mock Test',ClipboardCheck],['/practice','ฝึกทำโจทย์',Dumbbell],['/quota','โควตา',Ticket],['/student/profile','โปรไฟล์',UserRound]]
-const adminLinks=[['/admin','ภาพรวมแอดมิน',ShieldCheck],['/admin/students','นักเรียน',Users],['/admin/questions','คลังคำถาม',BookOpen],['/admin/exam-sets','ชุดข้อสอบ',Files],['/admin/analytics','วิเคราะห์ผล',ChartNoAxesCombined]]
-export default function Layout({children,admin=false}){const [open,setOpen]=useState(false);const nav=useNavigate();async function logout(){if(isSupabaseConfigured)await supabase.auth.signOut();nav('/login')};const links=admin?adminLinks:studentLinks;return <div className="app-shell">
- <aside className={'sidebar '+(open?'open':'')}><div className="brand"><span className="brand-mark"><GraduationCap/></span><div><strong>Mock Up Test</strong><small>A-Level สังคม</small></div></div><button className="close-menu" onClick={()=>setOpen(false)} aria-label="ปิดเมนู"><X/></button>
- <nav className="nav-list">{links.map(([to,label,Icon])=><NavLink key={to} to={to} end={to==='/admin'} onClick={()=>setOpen(false)}><Icon/><span>{label}</span></NavLink>)}</nav>
- {!admin&&<div className="admin-callout"><ShieldCheck/><div><b>สำหรับคุณครู</b><span>จัดการข้อสอบและนักเรียน</span><NavLink to="/admin">ไปหน้าแอดมิน →</NavLink></div></div>}
- {admin&&<NavLink className="back-student" to="/student/dashboard">← กลับหน้าของนักเรียน</NavLink>}
- <button className="logout" onClick={logout}><LogOut/>ออกจากระบบ</button></aside>{open&&<button className="overlay" onClick={()=>setOpen(false)} aria-label="ปิดเมนู"/>}
- <section className="app-main"><header className="topbar"><button className="menu-button" onClick={()=>setOpen(true)}><Menu/></button><div className="mobile-brand">A-Level สังคม</div><div className="user-chip"><span className="avatar">ม</span><div><b>มีน</b><small>นักเรียน</small></div></div></header><main>{children}</main></section>
- <nav className="bottom-nav">{studentLinks.slice(0,5).map(([to,label,Icon])=><NavLink key={to} to={to}><Icon/><span>{label.replace('ทำโจทย์','')}</span></NavLink>)}</nav></div>}
+import { useState } from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { LayoutDashboard, ClipboardCheck, Dumbbell, Ticket, UserRound, ShieldCheck, Users, BookOpen, Files, ChartNoAxesCombined, LogOut, Menu, X, GraduationCap } from 'lucide-react'
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
+
+const studentLinks = [
+  ['/student/dashboard', 'ภาพรวม', LayoutDashboard],
+  ['/mock', 'Mock Test', ClipboardCheck],
+  ['/practice', 'ฝึกทำโจทย์', Dumbbell],
+  ['/quota', 'โควตา', Ticket],
+  ['/student/profile', 'โปรไฟล์', UserRound],
+]
+const adminLinks = [
+  ['/admin', 'ภาพรวม', LayoutDashboard],
+  ['/admin/students', 'นักเรียน', Users],
+  ['/admin/questions', 'คลังคำถาม', BookOpen],
+  ['/admin/exam-sets', 'ชุดข้อสอบ', Files],
+  ['/admin/analytics', 'วิเคราะห์', ChartNoAxesCombined],
+]
+
+export default function Layout({ children, admin = false }) {
+  const [open, setOpen] = useState(false)
+  const nav = useNavigate()
+  const links = admin ? adminLinks : studentLinks
+  async function logout() {
+    if (isSupabaseConfigured) await supabase.auth.signOut()
+    nav('/login')
+  }
+  return <div className={'app-shell ' + (admin ? 'admin-shell' : 'student-shell')}>
+    <aside className={'sidebar ' + (open ? 'open' : '')}>
+      <div className="brand"><span className="brand-mark"><GraduationCap /></span><div><strong>Mock Up Test</strong><small>A-Level สังคม</small></div></div>
+      <button className="close-menu" onClick={() => setOpen(false)} aria-label="ปิดเมนู"><X /></button>
+      <nav className="nav-list">{links.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/admin'} onClick={() => setOpen(false)}><Icon /><span>{label}</span></NavLink>)}</nav>
+      {!admin && <div className="admin-callout"><ShieldCheck /><div><b>สำหรับคุณครู</b><span>จัดการข้อสอบและนักเรียน</span><NavLink to="/admin">ไปหน้าแอดมิน →</NavLink></div></div>}
+      {admin && <NavLink className="back-student" to="/student/dashboard">← กลับหน้าของนักเรียน</NavLink>}
+      <button className="logout" onClick={logout}><LogOut />ออกจากระบบ</button>
+    </aside>
+    {open && <button className="overlay" onClick={() => setOpen(false)} aria-label="ปิดเมนู" />}
+    <section className="app-main">
+      <header className="topbar"><button className="menu-button" onClick={() => setOpen(true)} aria-label="เปิดเมนู"><Menu /></button><div className="mobile-brand">A-Level สังคม</div><div className="user-chip"><span className="avatar">{admin ? 'ค' : 'ม'}</span><div><b>{admin ? 'ครูไต๋' : 'มีน'}</b><small>{admin ? 'ผู้ดูแลระบบ' : 'นักเรียน'}</small></div></div></header>
+      <main>{children}</main>
+    </section>
+    <nav className="bottom-nav">{links.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/admin'}><Icon /><span>{label}</span></NavLink>)}</nav>
+  </div>
+}
