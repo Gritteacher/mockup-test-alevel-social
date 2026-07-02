@@ -46,7 +46,7 @@ export default function Layout({ children, admin = false }) {
     </aside>
     {open && <button className="overlay" onClick={() => setOpen(false)} aria-label="ปิดเมนู" />}
     <section className="app-main">
-      <header className="topbar"><button className="menu-button" onClick={() => setOpen(true)} aria-label="เปิดเมนู"><Menu /></button><div className="mobile-brand">A-Level สังคม</div><div className="topbar-actions">{!admin && <NavLink className="admin-top-link" to="/admin" aria-label="ไปหน้า Admin"><ShieldCheck /><span>Admin</span></NavLink>}<div className="user-chip"><span className="avatar">{displayName[0]}</span><div><b>{displayName}</b><small>{roleLabel}</small></div></div></div></header>
+      <header className="topbar"><button className="menu-button" onClick={() => setOpen(true)} aria-label="เปิดเมนู"><Menu /></button><div className="mobile-brand">A-Level สังคม</div><div className="topbar-actions">{!admin && <NavLink className="admin-top-link" to="/admin" aria-label="ไปหน้า Admin"><ShieldCheck /><span>Admin</span></NavLink>}{admin && <button className="admin-logout-button" onClick={logout} aria-label="ออกจากระบบ"><LogOut /><span>ออกจากระบบ</span></button>}<div className="user-chip"><span className="avatar">{displayName[0]}</span><div><b>{displayName}</b><small>{roleLabel}</small></div></div></div></header>
       <main>{children}</main>
     </section>
     <nav className="bottom-nav">{links.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/admin'}><Icon /><span>{label}</span></NavLink>)}</nav>
