@@ -20,7 +20,14 @@ export default function Students() {
         .then(
           ({ data }) =>
             data &&
-            setRows(data.map((x) => ({ ...x, ...walletOf(x) }))),
+            setRows(data.map((x) => {
+              const wallet = walletOf(x);
+              return {
+                ...x,
+                mock_quota: Number(wallet.mock_quota || 0),
+                practice_points: Number(wallet.practice_points || 0),
+              };
+            })),
         );
   }, []);
   async function adjust(id, amount) {

@@ -54,7 +54,11 @@ export default function StudentDetail() {
     ]).then(([studentResult, attemptResult]) => {
       if (studentResult.data) {
         const wallet = walletOf(studentResult.data);
-        setStudent({ ...studentResult.data, ...wallet });
+        setStudent({
+          ...studentResult.data,
+          mock_quota: Number(wallet.mock_quota || 0),
+          practice_points: Number(wallet.practice_points || 0),
+        });
       }
       setAttempts(attemptResult.data || []);
       setLoading(false);
