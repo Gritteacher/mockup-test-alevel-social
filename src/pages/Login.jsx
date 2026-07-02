@@ -24,7 +24,10 @@ export default function Login() {
     ).toString();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo },
+      options: {
+        redirectTo,
+        queryParams: { prompt: "select_account" },
+      },
     });
     if (error) {
       alert("ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่");
