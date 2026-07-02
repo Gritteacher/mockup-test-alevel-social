@@ -1,5 +1,24 @@
+import { useEffect, useMemo, useState } from 'react'
 import { AlertCircle, ChevronDown } from 'lucide-react'
+import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient'
+
 export default function Analytics() {
-  const avg = 68.4
-  return <div className="page analytics-page"><div className="page-heading"><div><h1>วิเคราะห์ผลสอบ</h1><p>ติดตามแนวโน้มและนักเรียนที่ต้องดูแล</p></div></div><div className="analytics-filters"><button>ชุดที่ 1 <ChevronDown /></button><button>เดือนนี้ <ChevronDown /></button></div><div className="analytics-metrics"><div><span>เฉลี่ย</span><b>{avg}</b></div><div><span>สอบ</span><b>1,247</b></div><div><span>นักเรียน</span><b>248</b></div></div><section className="panel trend-card"><h2>แนวโน้มคะแนน</h2><svg viewBox="0 0 300 110" role="img" aria-label="กราฟแนวโน้มคะแนน"><polyline points="0,85 40,68 80,85 125,35 170,46 215,20 260,40 300,55" fill="none" stroke="currentColor" strokeWidth="3" /></svg></section><section className="low-quota-list"><h2>โควตาใกล้หมด</h2>{['ธนวัฒน์ มาดี','ศศิธร เจริญ','กฤษฎา ใจตรง'].map((name,i)=><div key={name}><AlertCircle /><b>{name}</b><span className={i===2?'empty':''}>โควตา {i===2?0:1}</span></div>)}</section></div>
+  const [attempts, setAttempts] = useState([])
+  const [students, setStudents] = useState(0)
+  const [lowQuota, setLowQuota] = useState([])
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    Promise.all([
+      supabase.from('attempts').select('*').order('created_at', { ascending: true }),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student'),
+      supabase.from('profiles').select('full_name, quota_wallets(mock_quota)').eq('role', 'student'),
+    ]).then(([attemptResult, studentResult, quotaResult]) => {
+      setAttempts(attemptResult.data || [])
+      setStudents(studentResult.count || 0)
+      setLowQuota((quotaResult.data || []).filter(item => Number(item.quota_wallets?.[0]?.mock_quota || 0) <= 1))
+    })
+  }, [])
+  const average = useMemo(() => attempts.length ? (attempts.reduce((sum, item) => sum + Number(item.percentage || 0), 0) / attempts.length).toFixed(1) : '0.0', [attempts])
+  const points = attempts.slice(-8).map((item, index, list) => `${index * (300 / Math.max(1, list.length - 1))},${100 - Math.min(100, Number(item.percentage || 0))}`).join(' ')
+  return <div className="page analytics-page"><div className="page-heading"><div><h1>วิเคราะห์ผลสอบ</h1><p>ติดตามแนวโน้มและนักเรียนที่ต้องดูแล</p></div></div><div className="analytics-filters"><button>ทุกชุด <ChevronDown /></button><button>ทั้งหมด <ChevronDown /></button></div><div className="analytics-metrics"><div><span>เฉลี่ย</span><b>{average}</b></div><div><span>สอบ</span><b>{attempts.length}</b></div><div><span>นักเรียน</span><b>{students}</b></div></div><section className="panel trend-card"><h2>แนวโน้มคะแนน</h2>{points ? <svg viewBox="0 0 300 110" role="img" aria-label="กราฟแนวโน้มคะแนน"><polyline points={points} fill="none" stroke="currentColor" strokeWidth="3" /></svg> : <div className="empty-state">ยังไม่มีข้อมูลคะแนน</div>}</section><section className="low-quota-list"><h2>โควตาใกล้หมด</h2>{lowQuota.length === 0 ? <div className="empty-state">ยังไม่มีนักเรียนที่โควตาใกล้หมด</div> : lowQuota.map(item => { const quota = Number(item.quota_wallets?.[0]?.mock_quota || 0); return <div key={item.full_name}><AlertCircle /><b>{item.full_name || 'ไม่ระบุชื่อ'}</b><span className={quota === 0 ? 'empty' : ''}>โควตา {quota}</span></div> })}</section></div>
 }

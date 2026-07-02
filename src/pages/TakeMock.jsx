@@ -2,21 +2,21 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Clock3, Flag, ChevronLeft, ChevronRight, Send, Menu } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
-import { demoQuestions } from '../lib/demoData'
 
 export default function TakeMock() {
   const { attemptId } = useParams()
   const nav = useNavigate()
-  const [questions, setQuestions] = useState(demoQuestions)
+  const [questions, setQuestions] = useState([])
   const [answers, setAnswers] = useState({})
   const [index, setIndex] = useState(0)
-  const [seconds, setSeconds] = useState(90 * 60)
+  const [seconds, setSeconds] = useState(0)
+  const [totalSeconds, setTotalSeconds] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   useEffect(() => {
     if (!isSupabaseConfigured) return
     ;(async () => {
       const { data: a } = await supabase.from('attempts').select('*, exam_sets(duration_minutes,title)').eq('id', attemptId).single()
-      if (a) setSeconds(a.exam_sets.duration_minutes * 60)
+      if (a) { const duration = a.exam_sets.duration_minutes * 60; setSeconds(duration); setTotalSeconds(duration) }
       const { data } = await supabase.from('exam_set_questions').select('position, questions(*, question_choices(*))').eq('exam_set_id', a?.exam_set_id).order('position')
       if (data) setQuestions(data.map(x => ({ ...x.questions, choices: x.questions.question_choices?.map(c => c.choice_text), choice_rows: x.questions.question_choices, correct_index: x.questions.question_choices?.findIndex(c => c.is_correct) })))
     })()
@@ -32,8 +32,8 @@ export default function TakeMock() {
     setSubmitting(true)
     let correct = 0
     const rows = questions.map((x, i) => { const selected = answers[x.id]; const ok = selected === x.correct_index; if (ok) correct++; return { attempt_id: attemptId, question_id: x.id, selected_choice_id: x.choice_rows?.[selected]?.id || null, is_correct: ok, order_no: i + 1 } })
-    const result = { id: attemptId, score: correct, total: questions.length, percentage: Math.round(correct / questions.length * 100), duration_seconds: 90 * 60 - seconds, answers, questions }
-    if (isSupabaseConfigured) { await supabase.from('attempt_answers').insert(rows); /* TODO: move scoring to RPC submit_attempt */ await supabase.from('attempts').update({ score: correct, total_questions: questions.length, status: 'submitted', submitted_at: new Date().toISOString(), duration_seconds: result.duration_seconds }).eq('id', attemptId) } else sessionStorage.setItem(`result:${attemptId}`, JSON.stringify(result))
+    const result = { id: attemptId, score: correct, total: questions.length, percentage: questions.length ? Math.round(correct / questions.length * 100) : 0, duration_seconds: Math.max(0, totalSeconds - seconds), answers, questions }
+    if (isSupabaseConfigured) { await supabase.from('attempt_answers').insert(rows); /* TODO: move scoring to RPC submit_attempt */ await supabase.from('attempts').update({ score: correct, total_questions: questions.length, status: 'submitted', submitted_at: new Date().toISOString(), duration_seconds: result.duration_seconds }).eq('id', attemptId) } else { alert('ยังไม่ได้เชื่อมต่อระบบ'); setSubmitting(false); return }
     nav(`/mock/result/${attemptId}`)
   }
   if (!q) return <div className="page-loader">กำลังโหลดข้อสอบ…</div>

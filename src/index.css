@@ -142,6 +142,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 :root { --ink:#13213f; --page:#f6f9fd; --line:#dce5f0; }
 body { background:var(--page); color:var(--ink); }
 .practice-cta,.mobile-submit { display:none; }
+.empty-state { width:100%; padding:28px 18px; border:1px dashed #cbd5e1; border-radius:12px; color:var(--muted); background:#fff; text-align:center; }
+.exam-empty { grid-column:1/-1; }
+.exam-card,.exam-title-row,.exam-title-row h2 { min-width:0; }
+.exam-title-row h2 { overflow-wrap:anywhere; word-break:break-word; }
+.exam-title-row .status-pill { flex:none; white-space:nowrap; }
 .exam-title-row,.simple-page-title,.result-topbar { display:flex; align-items:center; }
 .exam-title-row { gap:12px; }
 .exam-title-row h2 { flex:1; margin:0; }
@@ -277,7 +282,7 @@ body { background:var(--page); color:var(--ink); }
 
   /* Mock list and instruction */
   .compact-heading { display:grid; grid-template-columns:40px 1fr auto; align-items:center; text-align:center; }.compact-heading>div h1 { margin:0; font-size:24px; }.compact-heading>div p { display:none; }.page-back { justify-self:start; }.quota-badge { background:var(--ink); color:#fff; border-radius:999px; padding:9px 12px; }
-  .exam-grid { display:block; }.exam-card { padding:20px; margin-bottom:16px; overflow:visible; }.exam-title-row { display:grid; grid-template-columns:28px 1fr auto; gap:8px; }.exam-title-row svg { width:25px; }.exam-title-row h2 { font-size:17px; white-space:nowrap; }.status-pill { font-size:10px; }.exam-card>p { display:none; }.exam-card .exam-meta { border-bottom:1px solid var(--border); padding-bottom:16px; margin:16px 0; justify-content:flex-start; gap:12px; }.exam-card .exam-meta span { font-size:11px; }.exam-card .button { border:1.5px solid var(--ink); }
+  .exam-grid { display:block; }.exam-card { width:100%; max-width:100%; padding:20px; margin-bottom:16px; overflow:hidden; }.exam-title-row { display:grid; grid-template-columns:28px minmax(0,1fr) auto; gap:8px; align-items:start; }.exam-title-row svg { width:25px; }.exam-title-row h2 { font-size:17px; line-height:1.45; white-space:normal; }.status-pill { max-width:70px; font-size:9px; white-space:nowrap; align-self:start; }.exam-card>p { display:none; }.exam-card .exam-meta { border-bottom:1px solid var(--border); padding-bottom:16px; margin:16px 0; justify-content:flex-start; gap:8px 12px; flex-wrap:wrap; }.exam-card .exam-meta span { font-size:11px; white-space:nowrap; }.exam-card .button { border:1.5px solid var(--ink); }
   .simple-page-title h1 { font-size:24px; }.instruction-page .exam-summary { padding:20px; }.exam-summary h2 { font-size:20px; }.exam-summary>div { gap:12px; flex-wrap:wrap; }.exam-summary b { font-size:12px; }.quota-text { color:#d97706; }.instruction-body h2 { font-size:21px; }.instruction-body ol { padding-left:20px; font-size:13px; line-height:2.2; }.warning { border-color:#f59e0b; }.quota-confirm { justify-content:flex-end; min-height:64px; background:#fff; border:1px solid var(--border); }.quota-confirm>b { margin-right:auto; }.quota-confirm strong { font-size:22px; }.instruction-body>.button { margin-top:58px; }
 
   /* Take test */

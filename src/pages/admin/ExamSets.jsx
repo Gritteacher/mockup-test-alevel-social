@@ -1,3 +1,259 @@
-import { useEffect,useState } from 'react'; import { Plus,Clock3,ListChecks,Pencil,Trash2,Eye,EyeOff,X,Save } from 'lucide-react'; import { demoExams,demoQuestions } from '../../lib/demoData'; import { supabase,isSupabaseConfigured } from '../../lib/supabaseClient'
-const blank={title:'',description:'',duration_minutes:90,quota_cost:1,status:'draft',mode:'mock',question_ids:[]}
-export default function ExamSets(){const [rows,setRows]=useState(demoExams),[questions,setQuestions]=useState(demoQuestions),[form,setForm]=useState(blank),[show,setShow]=useState(false);useEffect(()=>{if(!isSupabaseConfigured)return;Promise.all([supabase.from('exam_sets').select('*, exam_set_questions(count)'),supabase.from('questions').select('id,question_text')]).then(([e,q])=>{if(e.data)setRows(e.data.map(x=>({...x,question_count:x.exam_set_questions?.[0]?.count||0})));if(q.data)setQuestions(q.data)})},[]);function open(x=blank){setForm({...x,question_ids:x.question_ids||[]});setShow(true)}async function save(e){e.preventDefault();if(!form.title)return alert('กรุณากรอกชื่อชุดข้อสอบ');let item={...form,id:form.id||`e${Date.now()}`,question_count:form.question_ids.length};if(isSupabaseConfigured){const payload={title:form.title,description:form.description,duration_minutes:Number(form.duration_minutes),quota_cost:Number(form.quota_cost),status:form.status,mode:'mock'};const {data,error}=form.id?await supabase.from('exam_sets').update(payload).eq('id',form.id).select().single():await supabase.from('exam_sets').insert(payload).select().single();if(error)return alert('บันทึกไม่สำเร็จ');item={...item,...data};await supabase.from('exam_set_questions').delete().eq('exam_set_id',item.id);if(form.question_ids.length)await supabase.from('exam_set_questions').insert(form.question_ids.map((question_id,i)=>({exam_set_id:item.id,question_id,position:i+1})))}setRows(form.id?rows.map(x=>x.id===form.id?item:x):[item,...rows]);setShow(false)}async function remove(id){if(!confirm('ยืนยันการลบชุดข้อสอบนี้?'))return;if(isSupabaseConfigured)await supabase.from('exam_sets').delete().eq('id',id);setRows(rows.filter(x=>x.id!==id))}return <div className="page"><div className="page-heading"><div><span className="eyebrow">Exam Builder</span><h1>ชุดข้อสอบ</h1><p>จัดชุดคำถาม กำหนดเวลา และสถานะการเผยแพร่</p></div><button className="button primary" onClick={()=>open()}><Plus/>สร้างชุดข้อสอบ</button></div><div className="admin-exam-grid">{rows.map((x,i)=><article className="admin-exam-card" key={x.id}><div className={'admin-exam-head cover-'+i}><span>{x.status==='published'?<Eye/>:<EyeOff/>}{x.status==='published'?'เผยแพร่แล้ว':'ฉบับร่าง'}</span><b>0{i+1}</b></div><div><h2>{x.title}</h2><p>{x.description}</p><div className="exam-meta"><span><Clock3/>{x.duration_minutes} นาที</span><span><ListChecks/>{x.question_count||0} ข้อ</span></div><footer><button className="button ghost" onClick={()=>open(x)}><Pencil/>แก้ไข</button><button className="icon-button danger-icon" onClick={()=>remove(x.id)}><Trash2/></button></footer></div></article>)}</div>{show&&<div className="modal-backdrop"><form className="modal" onSubmit={save}><header><div><h2>{form.id?'แก้ไขชุดข้อสอบ':'สร้างชุดข้อสอบใหม่'}</h2><p>ตั้งค่าและเลือกคำถามที่ต้องการ</p></div><button type="button" onClick={()=>setShow(false)}><X/></button></header><label><span>ชื่อชุดข้อสอบ</span><input value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/></label><label><span>รายละเอียด</span><textarea rows="2" value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></label><div className="form-grid"><label><span>เวลา (นาที)</span><input type="number" value={form.duration_minutes} onChange={e=>setForm({...form,duration_minutes:e.target.value})}/></label><label><span>โควตาที่ใช้</span><input type="number" value={form.quota_cost} onChange={e=>setForm({...form,quota_cost:e.target.value})}/></label><label><span>สถานะ</span><select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}><option value="draft">ฉบับร่าง</option><option value="published">เผยแพร่</option></select></label></div><fieldset className="question-picker"><legend>เลือกคำถาม ({form.question_ids.length})</legend>{questions.map((q,i)=><label key={q.id}><input type="checkbox" checked={form.question_ids.includes(q.id)} onChange={()=>setForm({...form,question_ids:form.question_ids.includes(q.id)?form.question_ids.filter(id=>id!==q.id):[...form.question_ids,q.id]})}/><span>{i+1}. {q.question_text}</span></label>)}</fieldset><footer><button type="button" className="button ghost" onClick={()=>setShow(false)}>ยกเลิก</button><button className="button primary"><Save/>บันทึกชุดข้อสอบ</button></footer></form></div>}</div>}
+import { useEffect, useState } from "react";
+import {
+  Plus,
+  Clock3,
+  ListChecks,
+  Pencil,
+  Trash2,
+  Eye,
+  EyeOff,
+  X,
+  Save,
+} from "lucide-react";
+import { supabase, isSupabaseConfigured } from "../../lib/supabaseClient";
+const blank = {
+  title: "",
+  description: "",
+  duration_minutes: 90,
+  quota_cost: 1,
+  status: "draft",
+  mode: "mock",
+  question_ids: [],
+};
+export default function ExamSets() {
+  const [rows, setRows] = useState([]),
+    [questions, setQuestions] = useState([]),
+    [form, setForm] = useState(blank),
+    [show, setShow] = useState(false);
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    Promise.all([
+      supabase.from("exam_sets").select("*, exam_set_questions(count)"),
+      supabase.from("questions").select("id,question_text"),
+    ]).then(([e, q]) => {
+      if (e.data)
+        setRows(
+          e.data.map((x) => ({
+            ...x,
+            question_count: x.exam_set_questions?.[0]?.count || 0,
+          })),
+        );
+      if (q.data) setQuestions(q.data);
+    });
+  }, []);
+  function open(x = blank) {
+    setForm({ ...x, question_ids: x.question_ids || [] });
+    setShow(true);
+  }
+  async function save(e) {
+    e.preventDefault();
+    if (!form.title) return alert("กรุณากรอกชื่อชุดข้อสอบ");
+    let item = {
+      ...form,
+      id: form.id || `e${Date.now()}`,
+      question_count: form.question_ids.length,
+    };
+    if (isSupabaseConfigured) {
+      const payload = {
+        title: form.title,
+        description: form.description,
+        duration_minutes: Number(form.duration_minutes),
+        quota_cost: Number(form.quota_cost),
+        status: form.status,
+        mode: "mock",
+      };
+      const { data, error } = form.id
+        ? await supabase
+            .from("exam_sets")
+            .update(payload)
+            .eq("id", form.id)
+            .select()
+            .single()
+        : await supabase.from("exam_sets").insert(payload).select().single();
+      if (error) return alert("บันทึกไม่สำเร็จ");
+      item = { ...item, ...data };
+      await supabase
+        .from("exam_set_questions")
+        .delete()
+        .eq("exam_set_id", item.id);
+      if (form.question_ids.length)
+        await supabase
+          .from("exam_set_questions")
+          .insert(
+            form.question_ids.map((question_id, i) => ({
+              exam_set_id: item.id,
+              question_id,
+              position: i + 1,
+            })),
+          );
+    }
+    setRows(
+      form.id
+        ? rows.map((x) => (x.id === form.id ? item : x))
+        : [item, ...rows],
+    );
+    setShow(false);
+  }
+  async function remove(id) {
+    if (!confirm("ยืนยันการลบชุดข้อสอบนี้?")) return;
+    if (isSupabaseConfigured)
+      await supabase.from("exam_sets").delete().eq("id", id);
+    setRows(rows.filter((x) => x.id !== id));
+  }
+  return (
+    <div className="page">
+      <div className="page-heading">
+        <div>
+          <span className="eyebrow">Exam Builder</span>
+          <h1>ชุดข้อสอบ</h1>
+          <p>จัดชุดคำถาม กำหนดเวลา และสถานะการเผยแพร่</p>
+        </div>
+        <button className="button primary" onClick={() => open()}>
+          <Plus />
+          สร้างชุดข้อสอบ
+        </button>
+      </div>
+      <div className="admin-exam-grid">
+        {rows.length === 0 && (
+          <div className="empty-state exam-empty">ยังไม่มีชุดข้อสอบ</div>
+        )}
+        {rows.map((x, i) => (
+          <article className="admin-exam-card" key={x.id}>
+            <div className={"admin-exam-head cover-" + i}>
+              <span>
+                {x.status === "published" ? <Eye /> : <EyeOff />}
+                {x.status === "published" ? "เผยแพร่แล้ว" : "ฉบับร่าง"}
+              </span>
+              <b>0{i + 1}</b>
+            </div>
+            <div>
+              <h2>{x.title}</h2>
+              <p>{x.description}</p>
+              <div className="exam-meta">
+                <span>
+                  <Clock3 />
+                  {x.duration_minutes} นาที
+                </span>
+                <span>
+                  <ListChecks />
+                  {x.question_count || 0} ข้อ
+                </span>
+              </div>
+              <footer>
+                <button className="button ghost" onClick={() => open(x)}>
+                  <Pencil />
+                  แก้ไข
+                </button>
+                <button
+                  className="icon-button danger-icon"
+                  onClick={() => remove(x.id)}
+                >
+                  <Trash2 />
+                </button>
+              </footer>
+            </div>
+          </article>
+        ))}
+      </div>
+      {show && (
+        <div className="modal-backdrop">
+          <form className="modal" onSubmit={save}>
+            <header>
+              <div>
+                <h2>{form.id ? "แก้ไขชุดข้อสอบ" : "สร้างชุดข้อสอบใหม่"}</h2>
+                <p>ตั้งค่าและเลือกคำถามที่ต้องการ</p>
+              </div>
+              <button type="button" onClick={() => setShow(false)}>
+                <X />
+              </button>
+            </header>
+            <label>
+              <span>ชื่อชุดข้อสอบ</span>
+              <input
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>รายละเอียด</span>
+              <textarea
+                rows="2"
+                value={form.description}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
+              />
+            </label>
+            <div className="form-grid">
+              <label>
+                <span>เวลา (นาที)</span>
+                <input
+                  type="number"
+                  value={form.duration_minutes}
+                  onChange={(e) =>
+                    setForm({ ...form, duration_minutes: e.target.value })
+                  }
+                />
+              </label>
+              <label>
+                <span>โควตาที่ใช้</span>
+                <input
+                  type="number"
+                  value={form.quota_cost}
+                  onChange={(e) =>
+                    setForm({ ...form, quota_cost: e.target.value })
+                  }
+                />
+              </label>
+              <label>
+                <span>สถานะ</span>
+                <select
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value })}
+                >
+                  <option value="draft">ฉบับร่าง</option>
+                  <option value="published">เผยแพร่</option>
+                </select>
+              </label>
+            </div>
+            <fieldset className="question-picker">
+              <legend>เลือกคำถาม ({form.question_ids.length})</legend>
+              {questions.map((q, i) => (
+                <label key={q.id}>
+                  <input
+                    type="checkbox"
+                    checked={form.question_ids.includes(q.id)}
+                    onChange={() =>
+                      setForm({
+                        ...form,
+                        question_ids: form.question_ids.includes(q.id)
+                          ? form.question_ids.filter((id) => id !== q.id)
+                          : [...form.question_ids, q.id],
+                      })
+                    }
+                  />
+                  <span>
+                    {i + 1}. {q.question_text}
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+            <footer>
+              <button
+                type="button"
+                className="button ghost"
+                onClick={() => setShow(false)}
+              >
+                ยกเลิก
+              </button>
+              <button className="button primary">
+                <Save />
+                บันทึกชุดข้อสอบ
+              </button>
+            </footer>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Clock3, ListChecks, Ticket, AlertTriangle, ArrowRight, ArrowLeft } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
-import { demoExams, demoWallet } from '../lib/demoData'
 
 export default function MockInstruction() {
   const { examId } = useParams()
   const nav = useNavigate()
-  const [exam, setExam] = useState(demoExams.find(x => x.id === examId) || demoExams[0])
-  const [wallet, setWallet] = useState(demoWallet)
+  const [exam, setExam] = useState(null)
+  const [wallet, setWallet] = useState({ mock_quota: 0, practice_points: 0 })
   const [loading, setLoading] = useState(false)
   useEffect(() => {
     if (!isSupabaseConfigured) return
@@ -20,17 +19,15 @@ export default function MockInstruction() {
     })()
   }, [examId])
   async function start() {
+    if (!exam) return
     if (wallet.mock_quota < exam.quota_cost) return alert('โควตาไม่เพียงพอ กรุณาฝึกทำโจทย์เพื่อสะสมโควตาเพิ่ม')
     setLoading(true)
-    if (!isSupabaseConfigured) {
-      sessionStorage.setItem('demoAttempt', JSON.stringify({ id: 'demo-attempt', exam_set_id: exam.id, started_at: new Date().toISOString() }))
-      nav('/mock/attempt/demo-attempt')
-      return
-    }
+    if (!isSupabaseConfigured) { alert('ยังไม่ได้เชื่อมต่อระบบ'); setLoading(false); return }
     const { data, error } = await supabase.rpc('start_mock_attempt', { p_exam_set_id: examId })
     if (error) { alert(error.message?.includes('quota') ? 'โควตาไม่เพียงพอ กรุณาสะสมโควตาเพิ่ม' : 'ไม่สามารถเริ่มสอบได้ กรุณาลองใหม่'); setLoading(false); return }
     nav(`/mock/attempt/${data.id || data}`)
   }
+  if (!exam) return <div className="page narrow"><div className="empty-state">ไม่พบชุดข้อสอบนี้</div></div>
   return <div className="page narrow instruction-page">
     <div className="simple-page-title"><Link to="/mock"><ArrowLeft /></Link><h1>คำชี้แจงก่อนสอบ</h1></div>
     <section className="panel exam-summary"><h2>{exam.title}</h2><div><b><Clock3 />{exam.duration_minutes} นาที</b><b><ListChecks />{exam.question_count || 50} ข้อ</b><b className="quota-text"><Ticket />{exam.quota_cost} โควตา</b></div></section>

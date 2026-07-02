@@ -2,14 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { CheckCircle2, XCircle, Clock3, RotateCcw, LayoutDashboard, ArrowLeft, Share2, Lightbulb } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
-import { demoQuestions } from '../lib/demoData'
 
 export default function Result() {
   const { attemptId } = useParams()
-  const fallback = { score: 4, total: 5, percentage: 72, duration_seconds: 4980, answers: { q1: 0, q2: 0, q3: 1, q4: 0, q5: 0 }, questions: demoQuestions }
-  const [result, setResult] = useState(() => JSON.parse(sessionStorage.getItem(`result:${attemptId}`) || 'null') || fallback)
+  const [result, setResult] = useState(() => JSON.parse(sessionStorage.getItem(`result:${attemptId}`) || 'null'))
   useEffect(() => { if (!isSupabaseConfigured) return; (async () => { const { data: a } = await supabase.from('attempts').select('*').eq('id', attemptId).single(); const { data: ans } = await supabase.from('attempt_answers').select('*, questions(*, question_choices(*))').eq('attempt_id', attemptId); if (a && ans) setResult({ score: a.score, total: a.total_questions, percentage: Math.round(a.score / a.total_questions * 100), duration_seconds: a.duration_seconds, answers: Object.fromEntries(ans.map(x => [x.question_id, x.questions.question_choices.findIndex(c => c.id === x.selected_choice_id)])), questions: ans.map(x => ({ ...x.questions, choices: x.questions.question_choices.map(c => c.choice_text), correct_index: x.questions.question_choices.findIndex(c => c.is_correct) })) }) })() }, [attemptId])
-  const subjectScores = useMemo(() => { const map = {}; result.questions.forEach(q => { map[q.subject] ??= { right: 0, total: 0 }; map[q.subject].total++; if (result.answers[q.id] === q.correct_index) map[q.subject].right++ }); return map }, [result])
+  const subjectScores = useMemo(() => { const map = {}; (result?.questions || []).forEach(q => { map[q.subject] ??= { right: 0, total: 0 }; map[q.subject].total++; if (result.answers[q.id] === q.correct_index) map[q.subject].right++ }); return map }, [result])
+  if (!result) return <div className="page result-page"><div className="empty-state">ยังไม่มีผลการสอบ</div></div>
   const mins = Math.floor((result.duration_seconds || 0) / 60)
   return <div className="page result-page"><div className="result-topbar"><Link to="/mock"><ArrowLeft /></Link><h1>ผลการสอบ</h1><button aria-label="แชร์ผลสอบ"><Share2 /></button></div><section className="result-hero"><div className="result-score"><b>{result.percentage}</b><span>/100</span></div><div className="result-summary"><div className="right"><CheckCircle2 /><b>{result.score} ถูก</b></div><div className="wrong"><XCircle /><b>{result.total - result.score} ผิด</b></div><div><Clock3 /><b>{mins} นาที</b></div></div></section><section className="subject-panel"><h2>คะแนนแยกตามสาระ</h2>{Object.entries(subjectScores).map(([name, s]) => { const pct = Math.round(s.right / s.total * 100); return <div className="subject-result" key={name}><div><b>{name}</b><span>{s.right}/{s.total}</span></div><i><u style={{ width: `${pct}%` }} /></i></div> })}</section><div className="result-tip"><Lightbulb />ควรทบทวน เศรษฐศาสตร์ เพราะได้คะแนน 40%</div><div className="result-actions"><Link className="button ghost" to="/mock"><RotateCcw />ทำชุดอื่น</Link><Link className="button primary" to="/student/dashboard"><LayoutDashboard />กลับหน้าภาพรวม</Link></div></div>
 }
