@@ -22,6 +22,11 @@ function percent(attempt) {
   return total ? Math.round((Number(attempt.score || 0) / total) * 100) : 0;
 }
 
+function walletOf(profile) {
+  const relation = profile?.quota_wallets;
+  return (Array.isArray(relation) ? relation[0] : relation) || {};
+}
+
 export default function StudentDetail() {
   const { studentId } = useParams();
   const [student, setStudent] = useState(null);
@@ -48,7 +53,7 @@ export default function StudentDetail() {
         .order("created_at", { ascending: false }),
     ]).then(([studentResult, attemptResult]) => {
       if (studentResult.data) {
-        const wallet = studentResult.data.quota_wallets?.[0] || {};
+        const wallet = walletOf(studentResult.data);
         setStudent({ ...studentResult.data, ...wallet });
       }
       setAttempts(attemptResult.data || []);
@@ -66,6 +71,10 @@ export default function StudentDetail() {
           )
         : 0;
     },
+    [attempts],
+  );
+  const completedAttempts = useMemo(
+    () => attempts.filter((attempt) => attempt.status === "submitted"),
     [attempts],
   );
 
@@ -154,7 +163,7 @@ export default function StudentDetail() {
         <article>
           <BookOpenCheck />
           <span>จำนวนครั้งที่สอบ</span>
-          <b>{attempts.length}</b>
+          <b>{completedAttempts.length}</b>
         </article>
         <article>
           <TrendingUp />

@@ -42,7 +42,7 @@ export default function Layout({ children, admin = false }) {
       <div className="brand"><span className="brand-mark"><GraduationCap /></span><div><strong>Mock Up Test</strong><small>A-Level สังคม</small></div></div>
       <button className="close-menu" onClick={() => setOpen(false)} aria-label="ปิดเมนู"><X /></button>
       <nav className="nav-list">{links.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/admin'} onClick={() => setOpen(false)}><Icon /><span>{label}</span></NavLink>)}</nav>
-      {!admin && <div className="admin-callout"><ShieldCheck /><div><b>สำหรับคุณครู</b><span>จัดการข้อสอบและนักเรียน</span><NavLink to="/admin">ไปหน้าแอดมิน →</NavLink></div></div>}
+      {!admin && <NavLink className="admin-link" to="/admin" onClick={() => setOpen(false)}><ShieldCheck /><span>ส่วนผู้ดูแล</span></NavLink>}
       {admin && <NavLink className="back-student" to="/student/dashboard">← กลับหน้าของนักเรียน</NavLink>}
       <button className="logout" onClick={logout}><LogOut />ออกจากระบบ</button>
     </aside>
@@ -51,7 +51,6 @@ export default function Layout({ children, admin = false }) {
       <header className="topbar"><button className="menu-button" onClick={() => setOpen(true)} aria-label="เปิดเมนู"><Menu /></button><div className="mobile-brand">A-Level สังคม</div><div className="user-chip"><span className="avatar">{displayName[0]}</span><div><b>{displayName}</b><small>{roleLabel}</small></div></div></header>
       <main>{children}</main>
     </section>
-    {!admin && <NavLink className="mobile-admin-button" to="/admin"><ShieldCheck /><span>Admin</span></NavLink>}
     <nav className="bottom-nav">{links.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/admin'}><Icon /><span>{label}</span></NavLink>)}</nav>
   </div>
 }

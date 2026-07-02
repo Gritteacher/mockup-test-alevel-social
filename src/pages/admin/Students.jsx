@@ -2,6 +2,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, Plus, Minus, Users, ChevronRight } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabaseClient";
+
+function walletOf(profile) {
+  const relation = profile.quota_wallets;
+  return (Array.isArray(relation) ? relation[0] : relation) || {};
+}
+
 export default function Students() {
   const [rows, setRows] = useState([]),
     [q, setQ] = useState("");
@@ -14,7 +20,7 @@ export default function Students() {
         .then(
           ({ data }) =>
             data &&
-            setRows(data.map((x) => ({ ...x, ...x.quota_wallets?.[0] }))),
+            setRows(data.map((x) => ({ ...x, ...walletOf(x) }))),
         );
   }, []);
   async function adjust(id, amount) {
