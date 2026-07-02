@@ -10,7 +10,7 @@ cp .env.example .env
 npm run dev
 ```
 
-ใส่ `VITE_SUPABASE_ANON_KEY` ใน `.env` เพื่อเชื่อมฐานข้อมูลจริง หากยังไม่ใส่ค่า ระบบจะเปิดด้วยข้อมูลตัวอย่างสำหรับทดลอง UI และ flow ทั้งหมด
+ใส่ `VITE_SUPABASE_ANON_KEY` ใน `.env` เพื่อเชื่อมฐานข้อมูลจริง
 
 Supabase project URL ที่ตั้งไว้แล้ว:
 
@@ -53,4 +53,4 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 https://socup.grits.online/student/dashboard
 ```
 
-RPC ที่ต้องมีในโปรเจกต์ฐานข้อมูลคือ `start_mock_attempt` และ `admin_adjust_quota` ตามพารามิเตอร์ที่ระบุในโค้ด
+RPC ที่ต้องมีในโปรเจกต์ฐานข้อมูลคือ `start_mock_attempt`, `admin_adjust_quota`, `admin_delete_exam_set` และ `submit_practice_answer` ตามพารามิเตอร์ที่ระบุในโค้ด

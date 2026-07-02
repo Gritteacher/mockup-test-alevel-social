@@ -24,7 +24,8 @@ export default function ExamSets() {
   const [rows, setRows] = useState([]),
     [questions, setQuestions] = useState([]),
     [form, setForm] = useState(blank),
-    [show, setShow] = useState(false);
+    [show, setShow] = useState(false),
+    [deletingId, setDeletingId] = useState(null);
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     Promise.all([
@@ -95,10 +96,30 @@ export default function ExamSets() {
     setShow(false);
   }
   async function remove(id) {
-    if (!confirm("ยืนยันการลบชุดข้อสอบนี้?")) return;
-    if (isSupabaseConfigured)
-      await supabase.from("exam_sets").delete().eq("id", id);
-    setRows(rows.filter((x) => x.id !== id));
+    if (!isSupabaseConfigured) return;
+    const { count, error: countError } = await supabase
+      .from("attempts")
+      .select("id", { count: "exact", head: true })
+      .eq("exam_set_id", id);
+    if (countError) {
+      alert("ตรวจสอบประวัติการสอบไม่สำเร็จ กรุณาลองใหม่");
+      return;
+    }
+    const attemptCount = count || 0;
+    const warning = attemptCount
+      ? `ชุดข้อสอบนี้มีประวัติการสอบ ${attemptCount} รายการ การลบจะลบประวัติและคำตอบที่เกี่ยวข้องทั้งหมดด้วย\n\nยืนยันการลบถาวร?`
+      : "ยืนยันการลบชุดข้อสอบนี้ถาวร?";
+    if (!confirm(warning)) return;
+    setDeletingId(id);
+    const { error } = await supabase.rpc("admin_delete_exam_set", {
+      p_exam_set_id: id,
+    });
+    setDeletingId(null);
+    if (error) {
+      alert("ลบชุดข้อสอบไม่สำเร็จ กรุณาลองใหม่");
+      return;
+    }
+    setRows((current) => current.filter((x) => x.id !== id));
   }
   return (
     <div className="page">
@@ -147,6 +168,8 @@ export default function ExamSets() {
                 <button
                   className="icon-button danger-icon"
                   onClick={() => remove(x.id)}
+                  disabled={deletingId === x.id}
+                  aria-label={`ลบชุดข้อสอบ ${x.title}`}
                 >
                   <Trash2 />
                 </button>

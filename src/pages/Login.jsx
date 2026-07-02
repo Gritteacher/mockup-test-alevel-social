@@ -35,7 +35,7 @@ export default function Login() {
     <div className="auth-page">
       <Link to="/" className="back-home">
         <ArrowLeft />
-        กลับหน้าหลัก
+        กลับสู่หน้าหลัก
       </Link>
       <div className="login-card">
         <span className="big-brand">M</span>
