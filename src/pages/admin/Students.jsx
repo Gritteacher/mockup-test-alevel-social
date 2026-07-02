@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Search, Plus, Minus, Users } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Search, Plus, Minus, Users, ChevronRight } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabaseClient";
 export default function Students() {
   const [rows, setRows] = useState([]),
@@ -81,7 +82,9 @@ export default function Students() {
                     <div className="student-cell">
                       <span className="avatar">{(x.full_name || "?")[0]}</span>
                       <div>
-                        <b>{x.full_name || "ไม่ระบุชื่อ"}</b>
+                        <Link className="student-name-link" to={`/admin/students/${x.id}`}>
+                          {x.full_name || "ไม่ระบุชื่อ"}
+                        </Link>
                         <small>{x.email || "-"}</small>
                       </div>
                     </div>
@@ -95,16 +98,28 @@ export default function Students() {
                   </td>
                   <td>{x.practice_points || 0}</td>
                   <td>
-                    <div className="quota-buttons">
-                      <button onClick={() => adjust(x.id, -1)} title="ลดโควตา">
-                        <Minus />
-                      </button>
-                      <button
-                        onClick={() => adjust(x.id, 1)}
-                        title="เพิ่มโควตา"
+                    <div className="student-row-actions">
+                      <Link
+                        className="student-view-link"
+                        to={`/admin/students/${x.id}`}
+                        aria-label={`ดูข้อมูล ${x.full_name || "นักเรียน"}`}
                       >
-                        <Plus />
-                      </button>
+                        <ChevronRight />
+                      </Link>
+                      <div className="quota-buttons">
+                        <button
+                          onClick={() => adjust(x.id, -1)}
+                          title="ลดโควตา"
+                        >
+                          <Minus />
+                        </button>
+                        <button
+                          onClick={() => adjust(x.id, 1)}
+                          title="เพิ่มโควตา"
+                        >
+                          <Plus />
+                        </button>
+                      </div>
                     </div>
                   </td>
                 </tr>
