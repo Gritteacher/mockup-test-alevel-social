@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Ticket, Star, CheckCircle2, Gift, PlusCircle, MinusCircle } from 'lucide-react'
+import { Ticket, Star, Gift, PlusCircle, MinusCircle } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
 
 export default function Quota() {
@@ -14,5 +14,5 @@ export default function Quota() {
       if (t.data) setTx(t.data)
     })()
   }, [])
-  return <div className="page quota-page"><div className="page-heading"><div><h1>โควตาของฉัน</h1><p>สิทธิ์การทำข้อสอบของคุณ</p></div></div><div className="wallet-grid"><div className="wallet-card indigo"><div><span>Mock Quota</span><b>{wallet.mock_quota}</b></div><Ticket /></div><div className="wallet-card points"><div><span>Practice Points</span><b>{wallet.practice_points}</b></div><Star /></div></div><section className="quota-earn"><h2>วิธีรับโควตาเพิ่ม</h2><div><CheckCircle2 /><span>สอบผ่านเกณฑ์ +1 โควตา</span></div><div><Star /><span>สะสม 100 Practice Points = +1 โควตา</span></div><div><Gift /><span>ครูไต๋แจกพิเศษ</span></div></section><section className="quota-history"><h2>ประวัติโควตา</h2>{tx.length === 0 ? <div className="empty-state">ยังไม่มีประวัติโควตา</div> : tx.map(x => <div className="transaction" key={x.id}><time>{new Date(x.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</time><div><b>{x.note || x.type}</b></div><strong className={x.amount > 0 ? 'good' : 'bad'}>{x.amount > 0 ? <PlusCircle /> : <MinusCircle />}{x.amount > 0 ? '+' : ''}{x.amount}</strong></div>)}</section></div>
+  return <div className="page quota-page"><div className="page-heading"><div><h1>โควตาของฉัน</h1><p>สิทธิ์การทำข้อสอบของคุณ</p></div></div><div className="wallet-grid"><div className="wallet-card indigo"><div><span>Mock Quota</span><b>{wallet.mock_quota}</b></div><Ticket /></div><div className="wallet-card points"><div><span>Practice Points</span><b>{wallet.practice_points}</b></div><Star /></div></div><section className="quota-earn"><h2>วิธีรับโควตาเพิ่ม</h2><div><Star /><span>สะสม 100 Practice Points = +1 โควตา</span></div><div><Gift /><span>รับโควตาเพิ่มจากคุณครู</span></div></section><section className="quota-history"><h2>ประวัติโควตา</h2>{tx.length === 0 ? <div className="empty-state">ยังไม่มีประวัติโควตา</div> : tx.map(x => <div className="transaction" key={x.id}><time>{new Date(x.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</time><div><b>{x.note || x.type}</b></div><strong className={x.amount > 0 ? 'good' : 'bad'}>{x.amount > 0 ? <PlusCircle /> : <MinusCircle />}{x.amount > 0 ? '+' : ''}{x.amount}</strong></div>)}</section></div>
 }

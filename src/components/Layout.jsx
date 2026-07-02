@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, ClipboardCheck, Dumbbell, Ticket, UserRound, ShieldCheck, Users, BookOpen, Files, ChartNoAxesCombined, LogOut, Menu, X, GraduationCap } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
@@ -20,8 +20,19 @@ const adminLinks = [
 
 export default function Layout({ children, admin = false }) {
   const [open, setOpen] = useState(false)
+  const [profile, setProfile] = useState(null)
   const nav = useNavigate()
   const links = admin ? adminLinks : studentLinks
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return
+      const { data } = await supabase.from('profiles').select('full_name,nickname,email,role').eq('id', session.user.id).single()
+      setProfile(data || { email: session.user.email, role: 'student' })
+    })
+  }, [])
+  const displayName = profile?.nickname || profile?.full_name || profile?.email?.split('@')[0] || 'ผู้ใช้งาน'
+  const roleLabel = { admin: 'Admin', teacher: 'คุณครู', student: 'นักเรียน' }[profile?.role] || (admin ? 'Admin' : 'นักเรียน')
   async function logout() {
     if (isSupabaseConfigured) await supabase.auth.signOut()
     nav('/login')
@@ -37,9 +48,10 @@ export default function Layout({ children, admin = false }) {
     </aside>
     {open && <button className="overlay" onClick={() => setOpen(false)} aria-label="ปิดเมนู" />}
     <section className="app-main">
-      <header className="topbar"><button className="menu-button" onClick={() => setOpen(true)} aria-label="เปิดเมนู"><Menu /></button><div className="mobile-brand">A-Level สังคม</div><div className="user-chip"><span className="avatar">ผ</span><div><b>{admin ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน'}</b><small>{admin ? 'Admin' : 'นักเรียน'}</small></div></div></header>
+      <header className="topbar"><button className="menu-button" onClick={() => setOpen(true)} aria-label="เปิดเมนู"><Menu /></button><div className="mobile-brand">A-Level สังคม</div><div className="user-chip"><span className="avatar">{displayName[0]}</span><div><b>{displayName}</b><small>{roleLabel}</small></div></div></header>
       <main>{children}</main>
     </section>
+    {!admin && <NavLink className="mobile-admin-button" to="/admin"><ShieldCheck /><span>Admin</span></NavLink>}
     <nav className="bottom-nav">{links.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/admin'}><Icon /><span>{label}</span></NavLink>)}</nav>
   </div>
 }

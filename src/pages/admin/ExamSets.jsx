@@ -29,14 +29,15 @@ export default function ExamSets() {
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     Promise.all([
-      supabase.from("exam_sets").select("*, exam_set_questions(count)"),
+      supabase.from("exam_sets").select("*, exam_set_questions(question_id)"),
       supabase.from("questions").select("id,question_text"),
     ]).then(([e, q]) => {
       if (e.data)
         setRows(
           e.data.map((x) => ({
             ...x,
-            question_count: x.exam_set_questions?.[0]?.count || 0,
+            question_count: x.exam_set_questions?.length || 0,
+            question_ids: x.exam_set_questions?.map((item) => item.question_id) || [],
           })),
         );
       if (q.data) setQuestions(q.data);
