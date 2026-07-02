@@ -35,20 +35,24 @@ export default function PracticeSession() {
       if (!session) return setLoading(false);
       const [questionResult, walletResult] = await Promise.all([
         supabase
-          .from("questions")
-          .select(
-            "id,question_text,subject,difficulty,explanation,question_choices(id,choice_text)",
-          )
-          .eq("subject", subject),
+          .from("exam_sets")
+          .select("exam_set_questions(questions(id,question_text,subject,difficulty,explanation,question_choices(id,choice_text,position)))")
+          .eq("exam_type", "practice")
+          .eq("status", "published"),
         supabase
           .from("quota_wallets")
           .select("practice_points")
           .eq("user_id", session.user.id)
           .single(),
       ]);
-      const available = (questionResult.data || []).filter(
-        (question) => question.question_choices?.length,
-      );
+      const available = Array.from(new Map((questionResult.data || [])
+        .flatMap((exam) => exam.exam_set_questions || [])
+        .map((link) => link.questions)
+        .filter((question) => question?.subject === subject && question.question_choices?.length)
+        .map((question) => [question.id, {
+          ...question,
+          question_choices: [...question.question_choices].sort((a, b) => Number(a.position || 0) - Number(b.position || 0)),
+        }])).values());
       let solvedIds = new Set();
       if (available.length) {
         const { data: progress } = await supabase

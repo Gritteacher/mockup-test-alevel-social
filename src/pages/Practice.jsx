@@ -43,7 +43,11 @@ export default function Practice() {
           .select("practice_points")
           .eq("user_id", session.user.id)
           .single(),
-        supabase.from("questions").select("id,subject"),
+        supabase
+          .from("exam_sets")
+          .select("exam_set_questions(questions(id,subject))")
+          .eq("exam_type", "practice")
+          .eq("status", "published"),
         supabase
           .from("practice_progress")
           .select("question_id,solved_at")
@@ -52,7 +56,11 @@ export default function Practice() {
       ]);
 
       setPoints(walletResult.data?.practice_points || 0);
-      const questions = questionResult.data || [];
+      const questions = Array.from(new Map((questionResult.data || [])
+        .flatMap((exam) => exam.exam_set_questions || [])
+        .map((link) => link.questions)
+        .filter(Boolean)
+        .map((question) => [question.id, question])).values());
       const nextCounts = {};
       questions.forEach((question) => {
         nextCounts[question.subject] = (nextCounts[question.subject] || 0) + 1;

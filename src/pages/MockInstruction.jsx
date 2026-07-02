@@ -13,8 +13,8 @@ export default function MockInstruction() {
     if (!isSupabaseConfigured) return
     ;(async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      const [e, w] = await Promise.all([supabase.from('exam_sets').select('*').eq('id', examId).single(), supabase.from('quota_wallets').select('*').eq('user_id', session.user.id).single()])
-      if (e.data) setExam(e.data)
+      const [e, w] = await Promise.all([supabase.from('exam_sets').select('*, exam_set_questions(count)').eq('id', examId).single(), supabase.from('quota_wallets').select('*').eq('user_id', session.user.id).single()])
+      if (e.data) setExam({ ...e.data, question_count: e.data.exam_set_questions?.[0]?.count || 0 })
       if (w.data) setWallet(w.data)
     })()
   }, [examId])
@@ -30,7 +30,7 @@ export default function MockInstruction() {
   if (!exam) return <div className="page narrow"><div className="empty-state">ไม่พบชุดข้อสอบนี้</div></div>
   return <div className="page narrow instruction-page">
     <div className="simple-page-title"><Link to="/mock"><ArrowLeft /></Link><h1>คำชี้แจงก่อนสอบ</h1></div>
-    <section className="panel exam-summary"><h2>{exam.title}</h2><div><b><Clock3 />{exam.duration_minutes} นาที</b><b><ListChecks />{exam.question_count || 50} ข้อ</b><b className="quota-text"><Ticket />{exam.quota_cost} โควตา</b></div></section>
-    <section className="instruction-body"><h2>ข้อปฏิบัติก่อนเข้าสอบ</h2><ol><li>เตรียมอุปกรณ์และสถานที่สอบให้พร้อม</li><li>ห้ามปิดหรือรีเฟรชหน้าจอขณะกำลังสอบ</li><li>ตรวจสอบว่าตอบครบทุกข้อก่อนกดส่ง</li><li>แนะนำให้ใช้สัญญาณอินเทอร์เน็ตที่เสถียร</li><li>ไม่สามารถหยุดพักหรือบันทึกไว้ทำต่อได้</li></ol><div className="warning"><AlertTriangle /><div><b>หากอินเทอร์เน็ตขัดข้อง</b><span>ระบบจะคืนโควตาให้อัตโนมัติ</span></div></div><div className="quota-confirm"><b>โควตาปัจจุบัน</b><strong>{wallet.mock_quota}</strong><ArrowRight /><strong>{wallet.mock_quota - exam.quota_cost}</strong></div><button className="button primary full large" onClick={start} disabled={loading}>{loading ? 'กำลังเตรียมข้อสอบ…' : 'พร้อมแล้ว เริ่มทำข้อสอบ'} <ArrowRight /></button></section>
+    <section className="panel exam-summary"><h2>{exam.title}</h2><div><b><Clock3 />{exam.duration_minutes} นาที</b><b><ListChecks />{exam.question_count} ข้อ</b><b className="quota-text"><Ticket />{exam.quota_cost} โควตา</b></div></section>
+    <section className="instruction-body"><h2>ข้อปฏิบัติก่อนเข้าสอบ</h2><ol><li>เตรียมอุปกรณ์และสถานที่สอบให้พร้อม</li><li>ห้ามปิดหรือรีเฟรชหน้าจอขณะกำลังสอบ</li><li>ตรวจสอบว่าตอบครบทุกข้อก่อนกดส่ง</li><li>แนะนำให้ใช้สัญญาณอินเทอร์เน็ตที่เสถียร</li><li>ไม่สามารถหยุดพักหรือบันทึกไว้ทำต่อได้</li></ol><div className="warning"><AlertTriangle /><div><b>ตรวจสอบอินเทอร์เน็ตก่อนเริ่ม</b><span>โควตาจะถูกใช้ทันทีเมื่อเริ่มทำข้อสอบ</span></div></div><div className="quota-confirm"><b>โควตาปัจจุบัน</b><strong>{wallet.mock_quota}</strong><ArrowRight /><strong>{wallet.mock_quota - exam.quota_cost}</strong></div><button className="button primary full large" onClick={start} disabled={loading}>{loading ? 'กำลังเตรียมข้อสอบ…' : 'พร้อมแล้ว เริ่มทำข้อสอบ'} <ArrowRight /></button></section>
   </div>
 }

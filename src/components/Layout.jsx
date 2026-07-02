@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ClipboardCheck, Dumbbell, Ticket, UserRound, ShieldCheck, Users, BookOpen, Files, ChartNoAxesCombined, LogOut, Menu, X, GraduationCap } from 'lucide-react'
+import { LayoutDashboard, ClipboardCheck, Dumbbell, Ticket, UserRound, ShieldCheck, Users, FileJson, ChartNoAxesCombined, LogOut, Menu, X, GraduationCap } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
 
 const studentLinks = [
@@ -13,8 +13,7 @@ const studentLinks = [
 const adminLinks = [
   ['/admin', 'ภาพรวม', LayoutDashboard],
   ['/admin/students', 'นักเรียน', Users],
-  ['/admin/questions', 'คลังคำถาม', BookOpen],
-  ['/admin/exam-sets', 'ชุดข้อสอบ', Files],
+  ['/admin/exams', 'จัดการข้อสอบ', FileJson],
   ['/admin/analytics', 'วิเคราะห์', ChartNoAxesCombined],
 ]
 

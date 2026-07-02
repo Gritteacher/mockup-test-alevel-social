@@ -42,8 +42,16 @@ create table if not exists public.exam_sets (
   description text,
   duration_minutes integer not null default 90 check (duration_minutes > 0),
   quota_cost integer not null default 1 check (quota_cost >= 0),
-  status text not null default 'draft' check (status in ('draft', 'published')),
+  status text not null default 'draft' check (status in ('draft', 'published', 'inactive')),
   mode text not null default 'mock' check (mode in ('mock', 'practice')),
+  exam_type text not null default 'mock' check (exam_type in ('mock', 'practice', 'quiz', 'timed')),
+  subject text not null default 'แบบรวมสาระ',
+  difficulty text not null default 'ปานกลาง',
+  passing_score integer not null default 70 check (passing_score between 0 and 100),
+  shuffle_questions boolean not null default false,
+  shuffle_choices boolean not null default false,
+  answer_reveal text not null default 'after_submit' check (answer_reveal in ('immediate', 'after_submit')),
+  source_format text not null default 'manual',
   created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -67,6 +75,7 @@ create table if not exists public.question_choices (
   question_id uuid not null references public.questions(id) on delete cascade,
   choice_text text not null,
   is_correct boolean not null default false,
+  position integer not null default 0,
   created_at timestamptz not null default now()
 );
 
@@ -117,6 +126,7 @@ create table if not exists public.practice_progress (
 create index if not exists quota_transactions_user_created_idx on public.quota_transactions(user_id, created_at desc);
 create index if not exists attempts_user_created_idx on public.attempts(user_id, created_at desc);
 create index if not exists attempt_answers_attempt_idx on public.attempt_answers(attempt_id);
+create index if not exists question_choices_question_position_idx on public.question_choices(question_id, position);
 create index if not exists exam_set_questions_exam_position_idx on public.exam_set_questions(exam_set_id, position);
 create index if not exists practice_progress_user_idx on public.practice_progress(user_id, updated_at desc);
 
