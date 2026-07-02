@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Clock3, Flag, ChevronLeft, ChevronRight, Send, Menu } from 'lucide-react'
+import { Clock3, Flag, ChevronLeft, ChevronRight, Send, Menu, CheckCircle2, XCircle, Lightbulb } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
 
 export default function TakeMock() {
@@ -8,6 +8,7 @@ export default function TakeMock() {
   const nav = useNavigate()
   const [questions, setQuestions] = useState([])
   const [answers, setAnswers] = useState({})
+  const [checkedAnswers, setCheckedAnswers] = useState({})
   const [index, setIndex] = useState(0)
   const [seconds, setSeconds] = useState(0)
   const [totalSeconds, setTotalSeconds] = useState(0)
@@ -32,6 +33,10 @@ export default function TakeMock() {
   const q = questions[index]
   const time = `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds % 3600 / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
   const progress = useMemo(() => Math.round(answered / questions.length * 100), [answered, questions])
+  function checkCurrentAnswer() {
+    if (answers[q.id] === undefined) return
+    setCheckedAnswers(current => ({ ...current, [q.id]: true }))
+  }
   async function submit(auto = false) {
     if (submitting) return
     if (!auto && answered < questions.length && !confirm(`ยังไม่ได้ตอบ ${questions.length - answered} ข้อ ต้องการส่งคำตอบหรือไม่?`)) return
@@ -46,6 +51,6 @@ export default function TakeMock() {
   return <div className="exam-page">
     <header className="exam-header"><button className="exam-menu" aria-label="เมนูข้อสอบ"><Menu /></button><div><span>A-Level สังคม</span><b>{exam?.title || 'ชุดข้อสอบ'}</b></div><div className={'timer ' + (seconds < 300 ? 'danger' : '')}><Clock3 /><b>{time}</b></div><button className="button primary desktop-submit" onClick={() => submit(false)}><Send />ส่งข้อสอบ</button></header>
     <div className="exam-progress"><i style={{ width: `${progress}%` }} /></div>
-    <main className="exam-workspace"><aside className="question-map"><h3>ข้อสอบทั้งหมด</h3><div>{questions.map((x, i) => <button key={x.id} className={(i === index ? 'current ' : '') + (answers[x.id] !== undefined ? 'answered' : '')} onClick={() => setIndex(i)}>{i + 1}</button>)}</div></aside><section className="question-card"><div className="question-prompt"><div className="question-top"><span>ข้อที่ {index + 1}</span><button><Flag />ทำเครื่องหมาย</button></div><h2>{q.question_text}</h2></div><div className="choices">{q.choices.map((c, i) => { const answeredNow = answers[q.id] !== undefined; const reveal = exam?.answer_reveal === 'immediate' && answeredNow; const className = reveal ? (i === q.correct_index ? 'correct' : answers[q.id] === i ? 'wrong' : '') : answers[q.id] === i ? 'selected' : ''; return <button key={i} className={className} onClick={() => { if (!reveal) setAnswers({ ...answers, [q.id]: i }) }}><span></span>{c}</button> })}</div><button className="mobile-submit" onClick={() => submit(false)}>ส่งข้อสอบ</button><div className="question-actions"><button className="button ghost" disabled={index === 0} onClick={() => setIndex(index - 1)}><ChevronLeft />ก่อนหน้า</button><span>{index + 1} / {questions.length}</span><button className="button primary" disabled={index === questions.length - 1} onClick={() => setIndex(index + 1)}>ถัดไป<ChevronRight /></button></div></section></main>
+    <main className="exam-workspace"><aside className="question-map"><h3>ข้อสอบทั้งหมด</h3><div>{questions.map((x, i) => <button key={x.id} className={(i === index ? 'current ' : '') + (answers[x.id] !== undefined ? 'answered ' : '') + (checkedAnswers[x.id] ? 'checked' : '')} onClick={() => setIndex(i)}>{i + 1}</button>)}</div></aside><section className="question-card"><div className="question-prompt"><div className="question-top"><span>ข้อที่ {index + 1}</span><button><Flag />ทำเครื่องหมาย</button></div><h2>{q.question_text}</h2></div><div className="choices">{q.choices.map((c, i) => { const reveal = exam?.answer_reveal === 'immediate' && checkedAnswers[q.id]; const className = reveal ? (i === q.correct_index ? 'correct' : answers[q.id] === i ? 'wrong' : '') : answers[q.id] === i ? 'selected' : ''; return <button key={i} className={className} disabled={Boolean(reveal)} onClick={() => setAnswers({ ...answers, [q.id]: i })}><span></span>{c}</button> })}</div>{exam?.answer_reveal === 'immediate' && (!checkedAnswers[q.id] ? <button className="button primary check-answer-button" disabled={answers[q.id] === undefined} onClick={checkCurrentAnswer}>ตรวจคำตอบข้อนี้</button> : <div className={`mock-answer-feedback ${answers[q.id] === q.correct_index ? 'correct' : 'wrong'}`}>{answers[q.id] === q.correct_index ? <CheckCircle2 /> : <XCircle />}<div><h3>{answers[q.id] === q.correct_index ? 'ตอบถูก!' : 'คำตอบยังไม่ถูก'}</h3><p><Lightbulb />{q.explanation || 'ยังไม่มีคำอธิบายสำหรับข้อนี้'}</p></div></div>)}<button className="mobile-submit" onClick={() => submit(false)}>ส่งข้อสอบ</button><div className="question-actions"><button className="button ghost" disabled={index === 0} onClick={() => setIndex(index - 1)}><ChevronLeft />ก่อนหน้า</button><span>{index + 1} / {questions.length}</span><button className="button primary" disabled={index === questions.length - 1} onClick={() => setIndex(index + 1)}>ถัดไป<ChevronRight /></button></div></section></main>
   </div>
 }
