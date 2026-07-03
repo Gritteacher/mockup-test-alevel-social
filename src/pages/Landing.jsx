@@ -1,4 +1,32 @@
 import { Link } from 'react-router-dom'
-import { BarChart3, BookOpen, Target, CircleX, BookOpenText } from 'lucide-react'
+import { BookOpen, BookOpenText, LogIn, PenLine, UserPlus } from 'lucide-react'
 
-export default function Landing() { return <div className="landing"><header className="landing-nav"><div className="brand"><span className="brand-mark">M</span><div><strong>Mock Up Test สังคม</strong><small>A-Level สังคม By ครูไต๋</small></div></div><div className="landing-nav-actions"><Link className="button ghost guide-button" to="/guide"><BookOpenText/>คู่มือการใช้</Link><Link className="button ghost" to="/login">เข้าสู่ระบบ</Link></div></header><main className="hero"><section className="hero-copy"><h1>Mock Up Test<small>A-Level สังคม By ครูไต๋</small><span className="school-name">โรงเรียนเทพศิรินทร์ นนทบุรี</span></h1><p>ระบบจำลองสอบ A-Level สังคม<br />พร้อมวิเคราะห์จุดอ่อนและสะสมโควตา</p><Link to="/login" className="button primary google-start"><span>G</span>เริ่มใช้งานด้วย Gmail</Link></section><section className="landing-book"><BookOpen /></section><section className="features"><div><span><CircleX /></span><h3>จำลองสนามสอบ</h3></div><div><span><BarChart3 /></span><h3>วิเคราะห์ผลคะแนน</h3></div><div><span><Target /></span><h3>ฝึกตามจุดอ่อน</h3></div></section></main><footer className="landing-footer">© 2026 Mock Up Test สังคม By ครูไต๋ · โรงเรียนเทพศิรินทร์ นนทบุรี</footer></div> }
+export default function Landing() {
+  return <div className="landing landing-new">
+    <main className="landing-new-content">
+      <section className="landing-new-brand" aria-labelledby="landing-title">
+        <span className="landing-new-logo" aria-hidden="true">M</span>
+        <h1 id="landing-title">Mock Exam</h1>
+        <p>By ครูไต๋ กฤษณพล ทองอุ่น<br />โรงเรียนเทพศิรินทร์ นนทบุรี</p>
+      </section>
+
+      <section className="landing-new-visual" aria-hidden="true">
+        <BookOpen />
+        <PenLine />
+        <span className="landing-new-lines"><i /><i /><i /></span>
+      </section>
+
+      <section className="landing-new-intro">
+        <h2>A-Level สังคม</h2>
+        <p>ระบบจำลองสอบ A-Level สังคม<br />พร้อมวิเคราะห์จุดอ่อนและสะสมโควตา</p>
+      </section>
+
+      <nav className="landing-new-actions" aria-label="เริ่มต้นใช้งาน">
+        <Link className="landing-new-button primary" to="/login"><LogIn />เข้าสู่ระบบ</Link>
+        <Link className="landing-new-button secondary" to="/login"><UserPlus />ลงทะเบียน</Link>
+        <Link className="landing-new-button guide" to="/guide"><BookOpenText />คู่มือการใช้งาน</Link>
+      </nav>
+    </main>
+    <footer className="landing-new-footer">© 2026 Mock Exam A-Level สังคม By ครูไต๋</footer>
+  </div>
+}

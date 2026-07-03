@@ -38,7 +38,7 @@ export default function Layout({ children, admin = false }) {
   }
   return <div className={'app-shell ' + (admin ? 'admin-shell' : 'student-shell')}>
     <aside className={'sidebar ' + (open ? 'open' : '')}>
-      <div className="brand"><span className="brand-mark"><GraduationCap /></span><div><strong>Mock Up Test</strong><small>A-Level สังคม</small></div></div>
+      <div className="brand"><span className="brand-mark"><GraduationCap /></span><div><strong>Mock Exam</strong><small>A-Level สังคม</small></div></div>
       <button className="close-menu" onClick={() => setOpen(false)} aria-label="ปิดเมนู"><X /></button>
       <nav className="nav-list">{links.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === '/admin'} onClick={() => setOpen(false)}><Icon /><span>{label}</span></NavLink>)}</nav>
       {admin && <NavLink className="back-student" to="/student/dashboard">← กลับหน้าของนักเรียน</NavLink>}

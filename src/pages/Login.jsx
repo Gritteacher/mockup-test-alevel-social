@@ -42,7 +42,7 @@ export default function Login() {
       </Link>
       <div className="login-card">
         <span className="big-brand">M</span>
-        <h2>Mock Up Test A-Level สังคม</h2>
+        <h2>Mock Exam A-Level สังคม</h2>
         <p className="byline">By ครูไต๋</p>
         <hr />
         <h1>ยินดีต้อนรับ</h1>

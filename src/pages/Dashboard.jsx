@@ -34,7 +34,7 @@ export default function Dashboard() {
       <Stat icon={Trophy} tone="indigo" label="คะแนนล่าสุด" value={latestScore} suffix="/100" />
     </div>
     <div className="dashboard-grid">
-      <section className="start-card"><div className="start-content"><span className="pill">พร้อมทดสอบตัวเองหรือยัง?</span><h2>เริ่ม Mock Up Test</h2><span className="quota-pill">เลือกตามชุดข้อสอบ</span><p>เลือกชุดและรูปแบบข้อสอบที่เหมาะกับคุณ<br />พร้อมดูผลวิเคราะห์ทันทีหลังทำเสร็จ</p><Link className="button white" to="/mock">เลือกชุดข้อสอบ <ArrowRight /></Link></div><div className="decor-number">A</div></section>
+      <section className="start-card"><div className="start-content"><span className="pill">พร้อมทดสอบตัวเองหรือยัง?</span><h2>เริ่ม Mock Exam</h2><span className="quota-pill">เลือกตามชุดข้อสอบ</span><p>เลือกชุดและรูปแบบข้อสอบที่เหมาะกับคุณ<br />พร้อมดูผลวิเคราะห์ทันทีหลังทำเสร็จ</p><Link className="button white" to="/mock">เลือกชุดข้อสอบ <ArrowRight /></Link></div><div className="decor-number">A</div></section>
       <section className="quick-card"><div className="section-title"><div><h2>เป้าหมายของฉัน</h2><p>คะแนนเป้าหมาย A-Level สังคม</p></div><b className="target-score">{profile.target_score}</b></div><div className="goal-track"><i style={{ width: `${latestScore}%` }} /><span>คะแนนล่าสุด {latestScore}</span></div><div className="goal-tip"><TrendingUp /><span>{latest ? <>อีกเพียง <b>{Math.max(0, profile.target_score - latestScore)} คะแนน</b> ก็ถึงเป้าหมายแล้ว</> : 'เริ่มทำข้อสอบเพื่อดูระยะห่างจากเป้าหมาย'}</span></div></section>
     </div>
     <Link className="practice-cta" to="/practice"><div><b>ฝึกเพื่อสะสมโควตา</b><span>สะสม 100 pts = 1 โควตา</span></div><PlusCircle /></Link>

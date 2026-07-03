@@ -1,4 +1,4 @@
--- Mock Up Test A-Level สังคม By ครูไต๋
+-- Mock Exam A-Level สังคม By ครูไต๋
 -- Run this file in Supabase SQL Editor.
 
 create extension if not exists "pgcrypto";

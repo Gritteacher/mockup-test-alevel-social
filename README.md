@@ -1,4 +1,4 @@
-# Mock Up Test A-Level สังคม By ครูไต๋
+# Mock Exam A-Level สังคม By ครูไต๋
 
 เว็บแอป React + Vite สำหรับจำลองสอบ A-Level สังคม พร้อมระบบนักเรียนและแอดมิน
 

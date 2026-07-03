@@ -40,7 +40,7 @@ export async function createResultStory(result) {
   ctx.textAlign = "center";
   ctx.fillStyle = "#ffffff";
   ctx.font = "600 36px Prompt, sans-serif";
-  ctx.fillText("MOCK UP TEST", 540, 120);
+  ctx.fillText("MOCK EXAM", 540, 120);
   ctx.font = "400 28px Prompt, sans-serif";
   ctx.fillStyle = "#cbd5e1";
   ctx.fillText("A-Level สังคม By ครูไต๋", 540, 170);
@@ -94,7 +94,7 @@ export async function createResultStory(result) {
     ctx.fillText(label, x, 1250);
   });
 
-  const title = result.exam_title || "Mock Up Test A-Level สังคม";
+  const title = result.exam_title || "Mock Exam A-Level สังคม";
   fitText(ctx, title, 760, 36, 600);
   ctx.fillStyle = navy;
   ctx.fillText(title, 540, 1320);
