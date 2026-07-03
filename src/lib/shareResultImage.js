@@ -1,7 +1,39 @@
 function roundedRect(ctx, x, y, width, height, radius) {
   ctx.beginPath();
-  ctx.roundRect(x, y, width, height, radius);
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
   ctx.fill();
+}
+
+const promptSample = "Mock Exam คะแนนของฉัน โรงเรียนเทพศิรินทร์ นนทบุรี";
+
+async function ensurePromptFonts() {
+  if (!document.fonts) return;
+  const loads = [400, 500, 600, 700].map((weight) =>
+    document.fonts.load(`${weight} 32px "Prompt"`, promptSample),
+  );
+  await Promise.all(loads);
+  await document.fonts.ready;
+  if (!document.fonts.check('400 32px "Prompt"', promptSample)) {
+    throw new Error("Prompt Regular is not available");
+  }
+}
+
+function canvasToBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("Canvas image could not be encoded"));
+    }, "image/png");
+  });
 }
 
 function fitText(ctx, text, maxWidth, startSize, weight = 700) {
@@ -15,7 +47,7 @@ function fitText(ctx, text, maxWidth, startSize, weight = 700) {
 }
 
 export async function createResultStory(result) {
-  await document.fonts?.ready;
+  await ensurePromptFonts();
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
   canvas.height = 1920;
@@ -112,7 +144,7 @@ export async function createResultStory(result) {
   ctx.font = "600 24px Prompt, sans-serif";
   ctx.fillText("socup.grits.online", 540, 1795);
 
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png", 1));
+  const blob = await canvasToBlob(canvas);
   return { blob, url: URL.createObjectURL(blob) };
 }
 
@@ -120,7 +152,9 @@ export function downloadStory(blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `mock-test-result-${Date.now()}.png`;
+  link.download = `mock-exam-result-${Date.now()}.png`;
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
