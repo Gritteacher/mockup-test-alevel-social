@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   BookOpenCheck,
@@ -12,8 +12,10 @@ import {
   Target,
   Ticket,
   Timer,
+  Trash2,
   TrendingUp,
   UserRound,
+  X,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabaseClient";
 
@@ -29,10 +31,14 @@ function walletOf(profile) {
 
 export default function StudentDetail() {
   const { studentId } = useParams();
+  const navigate = useNavigate();
   const [student, setStudent] = useState(null);
   const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adjusting, setAdjusting] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -44,7 +50,6 @@ export default function StudentDetail() {
         .from("profiles")
         .select("*, quota_wallets(mock_quota,practice_points)")
         .eq("id", studentId)
-        .eq("role", "student")
         .single(),
       supabase
         .from("attempts")
@@ -96,6 +101,45 @@ export default function StudentDetail() {
       ...current,
       mock_quota: Math.max(0, Number(current.mock_quota || 0) + amount),
     }));
+  }
+
+  async function deleteAccount(event) {
+    event.preventDefault();
+    const reason = deleteReason.trim();
+    if (reason.length < 5 || deleting) return;
+    setDeleting(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setDeleting(false);
+      return alert("เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง");
+    }
+    let result;
+    try {
+      result = await fetch("/.netlify/functions/delete-student-account", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          "X-Supabase-Anon-Key": import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ studentId, reason }),
+      });
+    } catch {
+      setDeleting(false);
+      return alert("เชื่อมต่อระบบลบบัญชีไม่สำเร็จ กรุณาลองใหม่");
+    }
+    setDeleting(false);
+    if (!result.ok) {
+      const detail = await result.json().catch(() => ({}));
+      const messages = {
+        email_delivery_failed: "ส่งอีเมลแจ้งนักเรียนไม่สำเร็จ จึงยังไม่ลบบัญชี",
+        protected_account: "บัญชี Admin หรือบัญชีของตนเองไม่สามารถลบได้",
+        student_not_found: "ไม่พบบัญชีนักเรียนนี้",
+      };
+      return alert(messages[detail.error] || "ลบบัญชีไม่สำเร็จ กรุณาลองใหม่");
+    }
+    alert("ส่งอีเมลแจ้งเหตุผลและลบบัญชีนักเรียนเรียบร้อยแล้ว");
+    navigate("/admin/students", { replace: true });
   }
 
   if (loading)
@@ -267,6 +311,17 @@ export default function StudentDetail() {
           </div>
         )}
       </section>
+      <section className={`student-danger-zone${student.role !== "student" ? " protected" : ""}`}>
+        <div><Trash2 /><span><b>ลบบัญชีผู้ใช้</b><small>{student.role === "student" ? "ลบบัญชีและข้อมูลทั้งหมด พร้อมส่งอีเมลแจ้งเหตุผล" : "บัญชีนี้มีสิทธิ์ Admin จึงได้รับการป้องกันไม่ให้ลบ"}</small></span></div>
+        <button className="button danger" disabled={student.role !== "student"} onClick={() => setShowDelete(true)}><Trash2 />ลบบัญชี</button>
+      </section>
+      {showDelete && <div className="modal-backdrop"><form className="modal delete-student-modal" onSubmit={deleteAccount}>
+        <header><div><h2>ยืนยันการลบบัญชี</h2><p>{student.full_name || student.email}</p></div><button type="button" onClick={() => setShowDelete(false)} aria-label="ปิด"><X /></button></header>
+        <div className="delete-warning"><Trash2 /><span><b>การดำเนินการนี้ย้อนคืนไม่ได้</b><small>ระบบจะส่งอีเมลแจ้งเหตุผลก่อนลบบัญชีและข้อมูลทั้งหมด</small></span></div>
+        <label><span>เหตุผลที่ลบบัญชี</span><textarea rows="5" maxLength="1000" required placeholder="ระบุเหตุผลให้นักเรียนเข้าใจอย่างชัดเจน…" value={deleteReason} onChange={(event) => setDeleteReason(event.target.value)} /></label>
+        <small className="reason-count">{deleteReason.trim().length}/1000 ตัวอักษร · อย่างน้อย 5 ตัวอักษร</small>
+        <footer><button type="button" className="button ghost" onClick={() => setShowDelete(false)}>ยกเลิก</button><button className="button danger" disabled={deleting || deleteReason.trim().length < 5}>{deleting ? "กำลังส่งอีเมลและลบ…" : "ส่งอีเมลและลบบัญชี"}</button></footer>
+      </form></div>}
     </div>
   );
 }
