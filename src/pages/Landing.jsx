@@ -23,7 +23,7 @@ export default function Landing() {
 
       <nav className="landing-new-actions" aria-label="เริ่มต้นใช้งาน">
         <Link className="landing-new-button primary" to="/login"><LogIn />เข้าสู่ระบบ</Link>
-        <Link className="landing-new-button secondary" to="/login"><UserPlus />ลงทะเบียน</Link>
+        <Link className="landing-new-button secondary" to="/register"><UserPlus />ลงทะเบียน</Link>
         <Link className="landing-new-button guide" to="/guide"><BookOpenText />คู่มือการใช้งาน</Link>
       </nav>
     </main>

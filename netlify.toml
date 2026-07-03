@@ -5,6 +5,7 @@
 [build.environment]
   NODE_VERSION = "20"
   VITE_SUPABASE_URL = "https://afrjifttnrjrsnxoqpdx.supabase.co"
+  VITE_GOOGLE_CLIENT_ID = "546310314961-0n0q18cm0lbm214uc04jqefuithair82.apps.googleusercontent.com"
 
 [[redirects]]
   from = "/*"
