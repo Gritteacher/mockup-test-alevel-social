@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Users, Files, ClipboardCheck, TrendingUp } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient'
+import { STUDENT_PROFILE_FILTER } from '../../lib/studentScope'
 
 const percent = (item) => Number(item.total_questions) > 0 ? Math.round(Number(item.score || 0) / Number(item.total_questions) * 100) : 0
 
@@ -11,7 +12,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!isSupabaseConfigured) return
     Promise.all([
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student'),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).or(STUDENT_PROFILE_FILTER),
       supabase.from('exam_sets').select('*', { count: 'exact', head: true }),
       supabase.from('attempts').select('*, profiles(full_name), exam_sets(title)').order('created_at', { ascending: false }),
     ]).then(([studentResult, examResult, attemptResult]) => {

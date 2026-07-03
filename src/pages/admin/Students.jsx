@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, Plus, Minus, Users, ChevronRight, School, GraduationCap, Star, Ticket } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabaseClient";
+import { STUDENT_PROFILE_FILTER } from "../../lib/studentScope";
 
 function walletOf(profile) {
   const relation = profile.quota_wallets;
@@ -21,7 +22,7 @@ export default function Students() {
     supabase
         .from("profiles")
         .select("*, quota_wallets(*)")
-        .eq("role", "student")
+        .or(STUDENT_PROFILE_FILTER)
         .order("full_name", { ascending: true })
         .then(
           ({ data }) =>

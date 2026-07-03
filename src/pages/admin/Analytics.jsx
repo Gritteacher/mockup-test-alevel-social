@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AlertCircle, ChevronDown } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient'
+import { STUDENT_PROFILE_FILTER } from '../../lib/studentScope'
 
 const percent = (item) => Number(item.total_questions) > 0 ? Math.round(Number(item.score || 0) / Number(item.total_questions) * 100) : 0
 const walletOf = (profile) => {
@@ -16,8 +17,8 @@ export default function Analytics() {
     if (!isSupabaseConfigured) return
     Promise.all([
       supabase.from('attempts').select('*').order('created_at', { ascending: true }),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student'),
-      supabase.from('profiles').select('full_name, quota_wallets(mock_quota)').eq('role', 'student'),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).or(STUDENT_PROFILE_FILTER),
+      supabase.from('profiles').select('full_name, quota_wallets(mock_quota)').or(STUDENT_PROFILE_FILTER),
     ]).then(([attemptResult, studentResult, quotaResult]) => {
       setAttempts((attemptResult.data || []).filter(item => item.status === 'submitted'))
       setStudents(studentResult.count || 0)
