@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, BookOpenText, LogIn, PenLine, UserPlus } from 'lucide-react'
+import { BookOpenText, LogIn, UserPlus } from 'lucide-react'
 
 export default function Landing() {
   return <div className="landing landing-new">
@@ -10,10 +10,15 @@ export default function Landing() {
         <p>By ครูไต๋ กฤษณพล ทองอุ่น<br />โรงเรียนเทพศิรินทร์ นนทบุรี</p>
       </section>
 
-      <section className="landing-new-visual" aria-hidden="true">
-        <BookOpen />
-        <PenLine />
-        <span className="landing-new-lines"><i /><i /><i /></span>
+      <section className="landing-subjects" aria-label="สาระการเรียนรู้">
+        <small>ครบทุกสาระสำคัญ</small>
+        <div>
+          <span>ศาสนา</span>
+          <span>หน้าที่พลเมือง</span>
+          <span>เศรษฐศาสตร์</span>
+          <span>ประวัติศาสตร์</span>
+          <span>ภูมิศาสตร์</span>
+        </div>
       </section>
 
       <section className="landing-new-intro">
