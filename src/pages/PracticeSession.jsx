@@ -59,7 +59,7 @@ export default function PracticeSession() {
       const [examResult, answerResult, walletResult] = await Promise.all([
         supabase
           .from("exam_sets")
-          .select("id,title,description,subject,difficulty,exam_set_questions(position,questions(id,question_text,subject,difficulty,explanation,question_choices(id,choice_text,position)))")
+          .select("id,title,description,subject,difficulty,exam_set_questions(position,questions(id,question_text,image_url,image_alt,subject,difficulty,explanation,question_choices(id,choice_text,position)))")
           .eq("id", examId)
           .single(),
         supabase
@@ -192,6 +192,7 @@ export default function PracticeSession() {
         <b>{current.difficulty || "ปานกลาง"}</b>
       </div>
       <h2>{current.question_text}</h2>
+      {current.image_url && <figure className="question-image practice-question-image"><img src={current.image_url} alt={current.image_alt || `รูปประกอบข้อ ${index + 1}`} /></figure>}
       <div className="practice-choices">
         {current.question_choices.map((choice, choiceIndex) => {
           const isCorrect = feedback?.correct_choice_id === choice.id;

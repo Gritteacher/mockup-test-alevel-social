@@ -40,6 +40,8 @@ export const fieldGuide = {
   },
   questions: {
     question: "ข้อความโจทย์",
+    image_url: "ลิงก์รูปประกอบคำถาม (ไม่บังคับ) หากยังไม่มีให้เว้นว่าง แล้วค่อยอัปโหลดในหน้าแอดมินภายหลัง",
+    image_alt: "คำอธิบายรูปภาพสั้น ๆ เพื่อช่วยการเข้าถึง (ไม่บังคับ)",
     subject: "สาระของคำถามแต่ละข้อ",
     topic: "หัวข้อย่อย (ไม่บังคับ)",
     difficulty: "ง่าย ปานกลาง หรือยาก",
@@ -70,6 +72,8 @@ export function createExamTemplate() {
     },
     questions: [{
       question: "ข้อใดเป็นหน้าที่ของพลเมืองไทย",
+      image_url: "",
+      image_alt: "",
       subject: "หน้าที่พลเมือง",
       topic: "พลเมืองดี",
       difficulty: "ปานกลาง",
@@ -127,6 +131,8 @@ export function parseExamPackage(text) {
     const question = {
       row_number: index + 1,
       question_text: String(raw.question ?? raw.question_text ?? "").trim(),
+      image_url: String(raw.image_url ?? raw.image ?? "").trim() || null,
+      image_alt: String(raw.image_alt ?? raw.alt ?? "").trim() || null,
       subject: selectedSubject,
       topic_id: String(raw.topic ?? raw.topic_id ?? "").trim() || null,
       difficulty: ["ง่าย", "ปานกลาง", "ยาก"].includes(raw.difficulty) ? raw.difficulty : (settings.difficulty === "ผสม" ? "ปานกลาง" : settings.difficulty),

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Clock3, Download, Eye, EyeOff, FileJson, ListChecks, Pencil, Save, Settings2, Upload, X } from "lucide-react";
+import { AlertCircle, Clock3, Download, Eye, EyeOff, FileJson, ImagePlus, ListChecks, Pencil, Save, Settings2, Trash2, Upload, X } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabaseClient";
 import { answerReveals, createExamTemplate, difficulties, downloadJson, examTypes, fieldGuide, parseExamPackage, statuses, subjects } from "../../lib/examPackage";
 
@@ -27,6 +27,10 @@ export default function AdminExams() {
   const [questions, setQuestions] = useState([]);
   const [packageErrors, setPackageErrors] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [imageExam, setImageExam] = useState(null);
+  const [imageQuestions, setImageQuestions] = useState([]);
+  const [imageAltDrafts, setImageAltDrafts] = useState({});
+  const [uploadingQuestionId, setUploadingQuestionId] = useState("");
   const invalidQuestions = useMemo(() => questions.filter((question) => question.errors.length), [questions]);
 
   async function loadExams() {
@@ -96,6 +100,8 @@ export default function AdminExams() {
     }
     const { data: insertedQuestions, error: questionError } = await supabase.from("questions").insert(questions.map((question) => ({
       question_text: question.question_text,
+      image_url: question.image_url,
+      image_alt: question.image_alt,
       subject: question.subject,
       topic_id: question.topic_id,
       difficulty: question.difficulty,
@@ -165,6 +171,8 @@ export default function AdminExams() {
         const choices = [...(question.question_choices || [])].sort((a, b) => a.position - b.position);
         return {
           question: question.question_text,
+          image_url: question.image_url || "",
+          image_alt: question.image_alt || "",
           subject: question.subject,
           topic: question.topic_id,
           difficulty: question.difficulty,
@@ -174,6 +182,82 @@ export default function AdminExams() {
         };
       }),
     }, `${data.title.replace(/[^\p{L}\p{N}]+/gu, "-") || "exam"}.json`);
+  }
+
+  async function openImageManager(item) {
+    setImageExam(item);
+    setImageQuestions([]);
+    setImageAltDrafts({});
+    const { data, error } = await supabase
+      .from("exam_sets")
+      .select("id,title,exam_set_questions(position,questions(id,question_text,image_url,image_alt,subject)))")
+      .eq("id", item.id)
+      .single();
+    if (error || !data) return alert("โหลดคำถามสำหรับจัดการรูปภาพไม่สำเร็จ");
+    const orderedQuestions = [...(data.exam_set_questions || [])]
+      .sort((left, right) => Number(left.position) - Number(right.position))
+      .map((link) => ({ ...link.questions, position: link.position }))
+      .filter(Boolean);
+    setImageExam({ id: data.id, title: data.title });
+    setImageQuestions(orderedQuestions);
+    setImageAltDrafts(Object.fromEntries(orderedQuestions.map((question) => [question.id, question.image_alt || ""])));
+  }
+
+  function storagePathFromPublicUrl(url) {
+    const marker = "/storage/v1/object/public/question-images/";
+    const index = String(url || "").indexOf(marker);
+    return index >= 0 ? decodeURIComponent(String(url).slice(index + marker.length)) : "";
+  }
+
+  async function uploadQuestionImage(question, file) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return alert("กรุณาเลือกไฟล์รูปภาพเท่านั้น");
+    if (file.size > 4 * 1024 * 1024) return alert("รูปภาพต้องไม่เกิน 4 MB");
+    setUploadingQuestionId(question.id);
+    const extension = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+    const path = `${imageExam.id}/${question.id}-${Date.now()}.${extension}`;
+    const { error: uploadError } = await supabase.storage.from("question-images").upload(path, file, {
+      cacheControl: "31536000",
+      contentType: file.type,
+      upsert: true,
+    });
+    if (uploadError) {
+      setUploadingQuestionId("");
+      return alert("อัปโหลดรูปไม่สำเร็จ กรุณาตรวจว่า Storage bucket ถูกสร้างแล้ว");
+    }
+    const { data } = supabase.storage.from("question-images").getPublicUrl(path);
+    const { error: updateError } = await supabase
+      .from("questions")
+      .update({ image_url: data.publicUrl, image_alt: imageAltDrafts[question.id] || question.image_alt || "" })
+      .eq("id", question.id);
+    if (updateError) {
+      await supabase.storage.from("question-images").remove([path]);
+      setUploadingQuestionId("");
+      return alert("บันทึกลิงก์รูปภาพไม่สำเร็จ");
+    }
+    const oldPath = storagePathFromPublicUrl(question.image_url);
+    if (oldPath) await supabase.storage.from("question-images").remove([oldPath]);
+    setImageQuestions((current) => current.map((item) => item.id === question.id ? { ...item, image_url: data.publicUrl, image_alt: imageAltDrafts[question.id] || item.image_alt || "" } : item));
+    setUploadingQuestionId("");
+  }
+
+  async function saveQuestionImageAlt(question) {
+    const image_alt = imageAltDrafts[question.id] || "";
+    const { error } = await supabase.from("questions").update({ image_alt }).eq("id", question.id);
+    if (error) return alert("บันทึกคำอธิบายรูปไม่สำเร็จ");
+    setImageQuestions((current) => current.map((item) => item.id === question.id ? { ...item, image_alt } : item));
+  }
+
+  async function removeQuestionImage(question) {
+    if (!question.image_url || !confirm("ต้องการลบรูปประกอบของข้อนี้หรือไม่?")) return;
+    setUploadingQuestionId(question.id);
+    const path = storagePathFromPublicUrl(question.image_url);
+    if (path) await supabase.storage.from("question-images").remove([path]);
+    const { error } = await supabase.from("questions").update({ image_url: null, image_alt: null }).eq("id", question.id);
+    setUploadingQuestionId("");
+    if (error) return alert("ลบรูปประกอบไม่สำเร็จ");
+    setImageQuestions((current) => current.map((item) => item.id === question.id ? { ...item, image_url: null, image_alt: null } : item));
+    setImageAltDrafts((current) => ({ ...current, [question.id]: "" }));
   }
 
   return <div className="page unified-exams-page">
@@ -192,7 +276,7 @@ export default function AdminExams() {
         <h2>{item.title}</h2><p>{item.description || "ไม่มีรายละเอียด"}</p>
         <div className="exam-package-tags"><span>{item.subject || "แบบรวมสาระ"}</span><span>{item.difficulty || "ปานกลาง"}</span></div>
         <div className="exam-package-stats"><span><ListChecks /><b>{item.question_count}</b> ข้อ</span><span><Clock3 /><b>{item.duration_minutes}</b> นาที</span><span><Settings2 /><b>{item.attempt_count}</b> ครั้ง</span></div>
-        <footer><button className="button ghost" onClick={() => editSettings(item)}><Pencil />ตั้งค่า</button><button className="icon-button" onClick={() => exportExam(item)} aria-label={`ดาวน์โหลด ${item.title}`}><Download /></button></footer>
+        <footer><button className="button ghost" onClick={() => editSettings(item)}><Pencil />ตั้งค่า</button><button className="button ghost" onClick={() => openImageManager(item)}><ImagePlus />รูปภาพ</button><button className="icon-button" onClick={() => exportExam(item)} aria-label={`ดาวน์โหลด ${item.title}`}><Download /></button></footer>
       </article>)}
     </div>
 
@@ -203,7 +287,7 @@ export default function AdminExams() {
         <ExamSettings settings={settings} setSettings={setSettings} />
         <div className="json-validation"><b>ตรวจพบ {questions.length} คำถาม</b><span className={invalidQuestions.length || packageErrors.length ? "bad" : "good"}>{invalidQuestions.length || packageErrors.length ? `ต้องแก้ไข ${invalidQuestions.length + packageErrors.length} จุด` : "ไฟล์พร้อมนำเข้า"}</span></div>
         {(packageErrors.length > 0 || invalidQuestions.length > 0) && <div className="json-errors">{packageErrors.map((error) => <span key={error}><AlertCircle />{error}</span>)}{invalidQuestions.slice(0, 8).map((question) => <span key={question.row_number}><AlertCircle />ข้อ {question.row_number}: {question.errors.join(" · ")}</span>)}</div>}
-        {questions.length > 0 && <div className="json-question-preview">{questions.slice(0, 5).map((question) => <div key={question.row_number}><span>{question.row_number}</span><b>{question.question_text || "ไม่มีคำถาม"}</b><small>{question.subject} · {question.choices.length} ตัวเลือก</small></div>)}{questions.length > 5 && <p>และอีก {questions.length - 5} ข้อ</p>}</div>}
+        {questions.length > 0 && <div className="json-question-preview">{questions.slice(0, 5).map((question) => <div key={question.row_number}><span>{question.row_number}</span><b>{question.question_text || "ไม่มีคำถาม"}</b><small>{question.subject} · {question.choices.length} ตัวเลือก{question.image_url ? " · มีรูป" : ""}</small></div>)}{questions.length > 5 && <p>และอีก {questions.length - 5} ข้อ</p>}</div>}
       </>}
       <footer><button className="button ghost" onClick={() => setShowImport(false)}>ยกเลิก</button><button className="button primary" disabled={saving || !fileName || !settings.title.trim() || !questions.length || invalidQuestions.length > 0 || packageErrors.length > 0} onClick={importExam}>{saving ? "กำลังสร้างชุดข้อสอบ…" : "สร้างชุดข้อสอบ"}</button></footer>
     </section></div>}
@@ -213,6 +297,27 @@ export default function AdminExams() {
       <ExamSettings settings={settings} setSettings={setSettings} />
       <footer><button type="button" className="button ghost" onClick={() => setShowSettings(false)}>ยกเลิก</button><button className="button primary" disabled={saving}><Save />บันทึกการตั้งค่า</button></footer>
     </form></div>}
+
+    {imageExam && <div className="modal-backdrop"><section className="modal question-image-modal">
+      <header><div><h2>จัดการรูปภาพรายข้อ</h2><p>{imageExam.title} · อัปโหลดรูปหลังจากสร้างชุดข้อสอบแล้ว</p></div><button onClick={() => setImageExam(null)}><X /></button></header>
+      <div className="question-image-list">
+        {imageQuestions.length === 0 ? <div className="empty-state">กำลังโหลดคำถาม…</div> : imageQuestions.map((question, index) => <article className="question-image-item" key={question.id}>
+          <div className="question-image-preview">
+            {question.image_url ? <img src={question.image_url} alt={question.image_alt || `รูปประกอบข้อ ${index + 1}`} loading="lazy" /> : <span><ImagePlus />ยังไม่มีรูป</span>}
+          </div>
+          <div className="question-image-body">
+            <small>ข้อ {index + 1} · {question.subject}</small>
+            <b>{question.question_text}</b>
+            <label><span>คำอธิบายรูป</span><input value={imageAltDrafts[question.id] || ""} onChange={(event) => setImageAltDrafts((current) => ({ ...current, [question.id]: event.target.value }))} placeholder="เช่น แผนที่/กราฟ/ภาพประกอบโจทย์" /></label>
+            <div className="question-image-actions">
+              <label className="button primary"><Upload />{uploadingQuestionId === question.id ? "กำลังอัปโหลด…" : question.image_url ? "เปลี่ยนรูป" : "อัปโหลดรูป"}<input type="file" accept="image/*" disabled={uploadingQuestionId === question.id} onChange={(event) => uploadQuestionImage(question, event.target.files?.[0])} /></label>
+              <button className="button ghost" type="button" disabled={uploadingQuestionId === question.id} onClick={() => saveQuestionImageAlt(question)}><Save />บันทึกคำอธิบาย</button>
+              {question.image_url && <button className="button danger" type="button" disabled={uploadingQuestionId === question.id} onClick={() => removeQuestionImage(question)}><Trash2 />ลบรูป</button>}
+            </div>
+          </div>
+        </article>)}
+      </div>
+    </section></div>}
   </div>;
 }
 
